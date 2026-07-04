@@ -86,6 +86,7 @@ body::before {
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
+  padding-top: 80px;
   position: relative;
   z-index: 1;
 }
@@ -123,16 +124,20 @@ body::before {
 .nav-tabs {
   display: flex;
   gap: 8px;
-  background: var(--card-bg);
+  background: rgba(255,255,255,0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-radius: var(--radius);
-  padding: 6px;
-  box-shadow: var(--shadow);
-  margin-bottom: 24px;
-  position: sticky;
-  top: 16px;
-  z-index: 100;
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 10px 6px 6px;
+  box-shadow: 0 4px 24px rgba(99,102,241,0.12);
+  margin-bottom: 20px;
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 800px;
+  z-index: 1000;
 }
 .nav-tab {
   flex: 1;
