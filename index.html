@@ -402,6 +402,46 @@ body::before {
   transform: scale(1.1);
   box-shadow: 0 2px 8px rgba(0,0,0,0.12);
 }
+/* 考研倒计时里程碑 */
+.calendar-day.milestone {
+  position: relative;
+  overflow: visible;
+}
+.milestone-badge {
+  position: absolute;
+  top: -6px; right: -4px;
+  font-size: 0.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #6366f1, #f472b6);
+  color: white;
+  padding: 1px 4px;
+  border-radius: 3px;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.calendar-day.exam-day {
+  border: 2px solid #f472b6 !important;
+  background: linear-gradient(135deg, rgba(244,114,182,0.15), rgba(99,102,241,0.15)) !important;
+  color: var(--primary) !important;
+  font-weight: 900;
+  animation: examPulse 1.5s ease-in-out infinite;
+}
+.exam-badge {
+  position: absolute;
+  top: -8px; right: -6px;
+  font-size: 0.65rem;
+  pointer-events: none;
+  animation: bounce 1s ease-in-out infinite;
+}
+@keyframes examPulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(244,114,182,0.3); }
+  50% { box-shadow: 0 0 16px rgba(244,114,182,0.6); }
+}
+
+.calendar-day.milestone.studied {
+  background: linear-gradient(135deg, #34d399, #a78bfa) !important;
+}
 .calendar-legend {
   display: flex;
   gap: 16px;
@@ -815,10 +855,9 @@ body::before {
     <!-- 考研倒计时 -->
     <div class="card countdown-card">
       <div style="text-align:center;">
-        <div style="font-size:0.8rem;color:var(--text-light);margin-bottom:4px;">🎯 2026年12月19日 · 考研倒计时</div>
-        <div style="font-size:2.8rem;font-weight:900;background:linear-gradient(135deg,#6366f1,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" id="countdownDays">168</div>
-        <div style="font-size:0.85rem;color:var(--text-light);" id="countdownLabel">天</div>
-        <div style="margin-top:8px;font-size:0.75rem;color:var(--primary);" id="countdownTip"></div>
+        <div style="font-size:0.85rem;color:var(--text-light);margin-bottom:4px;">🎯 距离2026年12月19日考研</div>
+        <div style="font-size:3rem;font-weight:900;background:linear-gradient(135deg,#6366f1,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" id="countdownDays">168</div>
+        <div style="font-size:1rem;color:var(--primary);font-weight:700;">天</div>
       </div>
     </div>
 
@@ -1398,34 +1437,7 @@ function updateCountdown() {
   const now = new Date();
   const diff = EXAM_DATE.getTime() - now.getTime();
   const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
-
-  document.getElementById('countdownDays').textContent = daysLeft > 0 ? daysLeft : 0;
-
-  let label = '天';
-  let tip = '';
-
-  if (daysLeft <= 0) {
-    label = '🎉 考试日已到！';
-    tip = '你已经准备充分了，相信自己！';
-  } else if (daysLeft <= 30) {
-    label = '天 · 冲刺阶段！';
-    tip = '⚡ 最后的冲刺，每一分钟都珍贵！';
-  } else if (daysLeft <= 60) {
-    label = '天 · 关键时期';
-    tip = '📚 查漏补缺，稳扎稳打！';
-  } else if (daysLeft <= 100) {
-    label = '天 · 黄金备考';
-    tip = '💪 夯实基础，每天进步一点点！';
-  } else if (daysLeft <= 200) {
-    label = '天 · 筑基阶段';
-    tip = '🌱 现在开始，一切都来得及！';
-  } else {
-    label = '天 · 蓄势待发';
-    tip = '🎯 早起的鸟儿有虫吃，保持节奏！';
-  }
-
-  document.getElementById('countdownLabel').textContent = label;
-  document.getElementById('countdownTip').textContent = tip;
+  document.getElementById('countdownDays').textContent = daysLeft > 0 ? daysLeft : '🎉';
 }
 
 // 获取某天的学习分钟数
@@ -1465,6 +1477,9 @@ function renderCalendar() {
     html += '<div class="calendar-day other-month"></div>';
   }
 
+  // 里程碑：距考研还有X天的关键节点
+  const MILESTONES = [200, 100, 50, 30, 10, 7, 3, 1];
+
   // 填充当月日期
   for (let d = 1; d <= totalDays; d++) {
     const date = new Date(calendarYear, calendarMonth, d);
@@ -1475,11 +1490,24 @@ function renderCalendar() {
     const minutes = isPast ? getDailyMinutes(dateStr) : 0;
     const studied = minutes > 0;
 
+    // 计算该天距考研还有多少天
+    const daysUntilExam = Math.ceil((EXAM_DATE.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    const isMilestone = MILESTONES.includes(daysUntilExam);
+    const isExamDay = daysUntilExam === 0;
+
     if (studied) studiedCount++;
     if (isPast) totalMonthDays++;
 
     let cls = 'calendar-day';
     let tooltip = `${calendarYear}/${calendarMonth + 1}/${d}`;
+
+    if (isExamDay) {
+      cls += ' exam-day';
+      tooltip += ' · 🎯 考研日！';
+    } else if (isMilestone) {
+      cls += ' milestone';
+      tooltip += ` · 🎯 距考研仅剩${daysUntilExam}天！`;
+    }
 
     if (studied) {
       cls += ' studied';
@@ -1495,7 +1523,11 @@ function renderCalendar() {
       tooltip += ' · 未打卡';
     }
 
-    html += `<div class="${cls}" title="${tooltip}">${d}</div>`;
+    // 里程碑标记
+    const marker = isMilestone ? `<span class="milestone-badge">${daysUntilExam}</span>` : '';
+    const examMarker = isExamDay ? '<span class="exam-badge">🎯</span>' : '';
+
+    html += `<div class="${cls}" title="${tooltip}">${d}${marker}${examMarker}</div>`;
     totalMonthDays++;
   }
 
