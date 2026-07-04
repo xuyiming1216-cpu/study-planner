@@ -1141,16 +1141,16 @@ const ACHIEVEMENTS = [
   { id: 'log_100', name: '史学家的执念', icon: '📚', desc: '记录100条学习日志', check: d => d.logs.length >= 100 },
 
   // ======== 隐藏成就（locked时显示 ???） ========
-  { id: 'click_mascot', name: '戳戳乐', icon: '🐱', desc: '???', hidden: true, check: d => (d.mascotClicks || 0) >= 20 },
-  { id: 'secret_rainbow', name: '彩虹学者', icon: '🌈', desc: '???', hidden: true, check: d => checkAllSubjects(d) },
-  { id: 'weekend_warrior', name: '周末战神', icon: '⚔️', desc: '???', hidden: true, check: d => (d.weekendWarrior || false) },
-  { id: 'midnight_oil', name: '燃烧的夜', icon: '🕯️', desc: '???', hidden: true, check: d => (d.midnightOil || false) },
-  { id: 'perfect_pomodoros', name: '完美五连', icon: '✨', desc: '???', hidden: true, check: d => (d.perfectPomodoros || 0) >= 5 },
-  { id: 'comeback', name: '王者归来', icon: '🦅', desc: '???', hidden: true, check: d => (d.comebackDone || false) },
-  { id: 'lucky_number', name: '幸运数字', icon: '🍀', desc: '???', hidden: true, check: d => (d.luckyNumber || false) },
-  { id: 'full_house', name: '大满贯', icon: '🎰', desc: '???', hidden: true, check: d => checkFullHouse(d) },
-  { id: 'double_day', name: '双倍快乐', icon: '🎊', desc: '???', hidden: true, check: d => (d.doubleDay || false) },
-  { id: 'silence_lover', name: '安静的力量', icon: '🤫', desc: '???', hidden: true, check: d => (d.silenceLover || false) },
+  { id: 'click_mascot', name: '戳戳乐', icon: '🐱', desc: '点击吉祥物20次', hidden: true, check: d => (d.mascotClicks || 0) >= 20 },
+  { id: 'secret_rainbow', name: '彩虹学者', icon: '🌈', desc: '学遍英语、数学、政治、专业课全部科目', hidden: true, check: d => checkAllSubjects(d) },
+  { id: 'weekend_warrior', name: '周末战神', icon: '⚔️', desc: '周末累计学习超过4小时', hidden: true, check: d => (d.weekendWarrior || false) },
+  { id: 'midnight_oil', name: '燃烧的夜', icon: '🕯️', desc: '凌晨0-5点之间学习', hidden: true, check: d => (d.midnightOil || false) },
+  { id: 'perfect_pomodoros', name: '完美五连', icon: '✨', desc: '不中断完成5个番茄钟', hidden: true, check: d => (d.perfectPomodoros || 0) >= 5 },
+  { id: 'comeback', name: '王者归来', icon: '🦅', desc: '中断3天以上后重新开始学习', hidden: true, check: d => (d.comebackDone || false) },
+  { id: 'lucky_number', name: '幸运数字', icon: '🍀', desc: '当天学习时长恰好是66或88分钟', hidden: true, check: d => (d.luckyNumber || false) },
+  { id: 'full_house', name: '大满贯', icon: '🎰', desc: '同时满足：累计100小时+连续30天+50个番茄钟', hidden: true, check: d => checkFullHouse(d) },
+  { id: 'double_day', name: '双倍快乐', icon: '🎊', desc: '当天学习量达到平均水平的2倍以上', hidden: true, check: d => (d.doubleDay || false) },
+  { id: 'silence_lover', name: '安静的力量', icon: '🤫', desc: '同时完成3个以上目标', hidden: true, check: d => (d.silenceLover || false) },
 ];
 
 // 辅助检测函数
