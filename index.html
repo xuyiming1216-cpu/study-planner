@@ -478,6 +478,35 @@ body::before {
 }
 .progress-fill.complete { background: linear-gradient(90deg, var(--success), #6ee7b7); }
 .goal-stats { font-size: 0.78rem; color: var(--text-light); }
+.goal-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.goal-input {
+  width: 62px;
+  padding: 5px 8px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+  font-family: inherit;
+  transition: var(--transition);
+  background: #f9fafb;
+}
+.goal-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+/* 隐藏number输入框的上下箭头 */
+.goal-input::-webkit-outer-spin-button,
+.goal-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.goal-input[type=number] { -moz-appearance: textfield; }
 
 /* ========== 记录 ========== */
 .log-entry {
@@ -1690,14 +1719,26 @@ function showGoalModal(editId = null) {
 function updateGoalProgress(id, delta) {
   const goal = data.goals.find(g => g.id === id);
   if (!goal) return;
+  applyGoalProgress(goal, goal.current + delta);
+}
+
+function setGoalProgress(id, value) {
+  const goal = data.goals.find(g => g.id === id);
+  if (!goal) return;
+  const num = parseInt(value);
+  if (isNaN(num)) { showToast('⚠️ 请输入有效数字'); return; }
+  if (num < 0 || num > goal.target) { showToast(`⚠️ 请输入 0~${goal.target} 之间的数字`); return; }
+  applyGoalProgress(goal, num);
+}
+
+function applyGoalProgress(goal, newValue) {
   const wasComplete = goal.current >= goal.target;
-  goal.current = Math.max(0, Math.min(goal.target, goal.current + delta));
+  goal.current = Math.max(0, Math.min(goal.target, newValue));
   const isComplete = goal.current >= goal.target;
   if (isComplete && !wasComplete) {
     data.goalsCompleted = (data.goalsCompleted || 0) + 1;
     confetti();
     showToast(`🎉 目标达成：${goal.emoji} ${goal.name}！`);
-    // 检查是否所有目标同时完成
     if (data.goals.length >= 3 && data.goals.every(g => g.current >= g.target)) {
       data.silenceLover = true;
     }
@@ -1742,13 +1783,20 @@ function renderGoals() {
         <div class="progress-bar">
           <div class="progress-fill ${isComplete ? 'complete' : ''}" style="width:${percent}%"></div>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="goal-controls">
           <div class="goal-stats">${goal.current} / ${goal.target} ${goal.unit}（${percent.toFixed(0)}%）</div>
-          <div style="display:flex;gap:6px;">
-            <button class="btn btn-secondary btn-sm" onclick="updateGoalProgress(${goal.id}, -1)" style="padding:4px 10px;font-size:0.75rem;">➖</button>
-            <button class="btn btn-primary btn-sm" onclick="updateGoalProgress(${goal.id}, 1)" style="padding:4px 10px;font-size:0.75rem;">➕</button>
-            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();showGoalModal(${goal.id})" style="padding:4px 10px;font-size:0.75rem;">✏️</button>
-            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();deleteGoal(${goal.id})" style="padding:4px 10px;font-size:0.75rem;color:var(--danger)">🗑</button>
+          <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+            <input type="number" class="goal-input" id="goalInput_${goal.id}"
+              placeholder="数量" min="0" max="${goal.target}"
+              onkeydown="if(event.key==='Enter')setGoalProgress(${goal.id},this.value)">
+            <button class="btn btn-primary btn-sm" onclick="setGoalProgress(${goal.id},document.getElementById('goalInput_${goal.id}').value)" style="padding:4px 10px;font-size:0.75rem;">✅ 设置</button>
+            <button class="btn btn-sm" onclick="updateGoalProgress(${goal.id}, 1)" style="padding:4px 8px;font-size:0.7rem;background:#e0e7ff;color:var(--primary);border:none;border-radius:6px;cursor:pointer;">+1</button>
+            <button class="btn btn-sm" onclick="updateGoalProgress(${goal.id}, 5)" style="padding:4px 8px;font-size:0.7rem;background:#dbeafe;color:#2563eb;border:none;border-radius:6px;cursor:pointer;">+5</button>
+            <button class="btn btn-sm" onclick="updateGoalProgress(${goal.id}, 10)" style="padding:4px 8px;font-size:0.7rem;background:#bfdbfe;color:#1d4ed8;border:none;border-radius:6px;cursor:pointer;">+10</button>
+            <button class="btn btn-sm" onclick="updateGoalProgress(${goal.id}, -1)" style="padding:4px 8px;font-size:0.7rem;background:#fce7f3;color:var(--accent);border:none;border-radius:6px;cursor:pointer;">-1</button>
+            <span style="color:#e5e7eb;margin:0 2px;">|</span>
+            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();showGoalModal(${goal.id})" style="padding:4px 8px;font-size:0.7rem;">✏️</button>
+            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();deleteGoal(${goal.id})" style="padding:4px 8px;font-size:0.7rem;color:var(--danger)">🗑</button>
           </div>
         </div>
       </div>`;
