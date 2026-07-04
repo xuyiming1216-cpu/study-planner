@@ -626,6 +626,17 @@ body::before {
   100% { transform: scale(1); }
 }
 
+/* ========== 考研倒计时 ========== */
+.countdown-card {
+  background: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(244,114,182,0.06));
+  border: 1.5px solid rgba(99,102,241,0.15);
+  animation: countdownPulse 3s ease-in-out infinite;
+}
+@keyframes countdownPulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(99,102,241,0.08); }
+  50% { box-shadow: 0 6px 30px rgba(244,114,182,0.12); }
+}
+
 /* ========== 成就列表页 ========== */
 .ach-list-item {
   display: flex;
@@ -801,6 +812,16 @@ body::before {
 
   <!-- ==================== 仪表盘面板 ==================== -->
   <section class="panel active" id="panel-dashboard">
+    <!-- 考研倒计时 -->
+    <div class="card countdown-card">
+      <div style="text-align:center;">
+        <div style="font-size:0.8rem;color:var(--text-light);margin-bottom:4px;">🎯 2026年12月19日 · 考研倒计时</div>
+        <div style="font-size:2.8rem;font-weight:900;background:linear-gradient(135deg,#6366f1,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" id="countdownDays">168</div>
+        <div style="font-size:0.85rem;color:var(--text-light);" id="countdownLabel">天</div>
+        <div style="margin-top:8px;font-size:0.75rem;color:var(--primary);" id="countdownTip"></div>
+      </div>
+    </div>
+
     <!-- 等级 -->
     <div class="card">
       <div class="level-display">
@@ -1031,10 +1052,6 @@ function checkDateChange() {
     if (data.lastStudyDate === yesterday) {
       data.streak = prevStreak + 1;
     } else if (data.lastStudyDate !== today) {
-      // 中断了 — 如果之前学过且断了超过1天，标记回归
-      if (prevStreak >= 3 && data.totalMinutes > 60) {
-        data.comebackDone = true;
-      }
       data.streak = data.todayMinutes > 0 ? 1 : 0;
     }
     data.todayDate = today;
@@ -1146,11 +1163,13 @@ const ACHIEVEMENTS = [
   { id: 'weekend_warrior', name: '周末战神', icon: '⚔️', desc: '周末累计学习超过4小时', hidden: true, check: d => (d.weekendWarrior || false) },
   { id: 'midnight_oil', name: '燃烧的夜', icon: '🕯️', desc: '凌晨0-5点之间学习', hidden: true, check: d => (d.midnightOil || false) },
   { id: 'perfect_pomodoros', name: '完美五连', icon: '✨', desc: '不中断完成5个番茄钟', hidden: true, check: d => (d.perfectPomodoros || 0) >= 5 },
-  { id: 'comeback', name: '王者归来', icon: '🦅', desc: '中断3天以上后重新开始学习', hidden: true, check: d => (d.comebackDone || false) },
+  { id: 'hardcore_mode', name: '硬核学霸', icon: '🦅', desc: '连续7天每天学习超过3小时', hidden: true, check: d => checkHardcoreMode(d) },
   { id: 'lucky_number', name: '幸运数字', icon: '🍀', desc: '当天学习时长恰好是66或88分钟', hidden: true, check: d => (d.luckyNumber || false) },
   { id: 'full_house', name: '大满贯', icon: '🎰', desc: '同时满足：累计100小时+连续30天+50个番茄钟', hidden: true, check: d => checkFullHouse(d) },
   { id: 'double_day', name: '双倍快乐', icon: '🎊', desc: '当天学习量达到平均水平的2倍以上', hidden: true, check: d => (d.doubleDay || false) },
   { id: 'silence_lover', name: '安静的力量', icon: '🤫', desc: '同时完成3个以上目标', hidden: true, check: d => (d.silenceLover || false) },
+  { id: 'sunday_scholar', name: '周日不休', icon: '📖', desc: '连续4个周日都坚持学习', hidden: true, check: d => checkSundayStreak(d) },
+  { id: 'timer_master', name: '模式大师', icon: '🎛️', desc: '使用过所有番茄钟模式（25/45/50/15）', hidden: true, check: d => (d.timerModesUsed || []).length >= 4 },
 ];
 
 // 辅助检测函数
@@ -1178,8 +1197,48 @@ function checkAllSubjects(d) {
 }
 
 function checkFullHouse(d) {
-  // 同时拥有：100小时 + 30天连续 + 50个番茄钟
   return d.totalMinutes >= 6000 && d.streak >= 30 && d.totalMinutes >= 1250;
+}
+
+function checkHardcoreMode(d) {
+  // 连续7天每天学习超过180分钟
+  if ((d.hardcoreStreak || 0) >= 7) return true;
+  const today = d.todayDate;
+  const todayMin = d.logs.filter(l => l.date === today).reduce((s, l) => s + l.minutes, 0);
+  return todayMin >= 180 && checkHardcoreStreak(d) >= 7;
+}
+
+function checkHardcoreStreak(d) {
+  // 返回连续每天>=180分钟的最近天数
+  let streak = 0;
+  const today = new Date();
+  for (let i = 0; i < 365; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+    const minutes = d.logs.filter(l => l.date === dateStr).reduce((s, l) => s + l.minutes, 0);
+    if (minutes >= 180) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function checkSundayStreak(d) {
+  let streak = 0;
+  const today = new Date();
+  for (let i = 0; i < 20; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i * 7); // 往回数周日
+    // 调整到最近的周日
+    const dow = date.getDay();
+    date.setDate(date.getDate() - dow); // 跳到周日
+    if (date > today) date.setDate(date.getDate() - 7);
+    const dateStr = date.toISOString().split('T')[0];
+    const minutes = d.logs.filter(l => l.date === dateStr).reduce((s, l) => s + l.minutes, 0);
+    if (minutes > 0) streak++;
+    else break;
+  }
+  return streak >= 4;
 }
 
 function checkAchievements() {
@@ -1314,6 +1373,9 @@ function refreshDashboard() {
 
   // 问候
   updateGreeting();
+
+  // 倒计时
+  updateCountdown();
 }
 
 function updateGreeting() {
@@ -1328,6 +1390,42 @@ function updateGreeting() {
   else if (hour < 22) greeting = `🌆 晚上好，${name}，再学一会儿！`;
   else greeting = `🌙 ${name}，夜深了，学完早点休息～`;
   document.getElementById('greeting').textContent = greeting;
+}
+
+const EXAM_DATE = new Date(2026, 11, 19); // 2026年12月19日 考研
+
+function updateCountdown() {
+  const now = new Date();
+  const diff = EXAM_DATE.getTime() - now.getTime();
+  const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+  document.getElementById('countdownDays').textContent = daysLeft > 0 ? daysLeft : 0;
+
+  let label = '天';
+  let tip = '';
+
+  if (daysLeft <= 0) {
+    label = '🎉 考试日已到！';
+    tip = '你已经准备充分了，相信自己！';
+  } else if (daysLeft <= 30) {
+    label = '天 · 冲刺阶段！';
+    tip = '⚡ 最后的冲刺，每一分钟都珍贵！';
+  } else if (daysLeft <= 60) {
+    label = '天 · 关键时期';
+    tip = '📚 查漏补缺，稳扎稳打！';
+  } else if (daysLeft <= 100) {
+    label = '天 · 黄金备考';
+    tip = '💪 夯实基础，每天进步一点点！';
+  } else if (daysLeft <= 200) {
+    label = '天 · 筑基阶段';
+    tip = '🌱 现在开始，一切都来得及！';
+  } else {
+    label = '天 · 蓄势待发';
+    tip = '🎯 早起的鸟儿有虫吃，保持节奏！';
+  }
+
+  document.getElementById('countdownLabel').textContent = label;
+  document.getElementById('countdownTip').textContent = tip;
 }
 
 // 获取某天的学习分钟数
@@ -1706,14 +1804,6 @@ function trackMorningStreak() {
   }
 }
 
-// 中断后重新学习追踪
-function trackComeback() {
-  if (data.streak === 0 && data.totalMinutes > 60) {
-    // 之前学过但断掉了，现在重新开始
-    data.comebackDone = true;
-  }
-}
-
 // ==================== 隐藏成就追踪函数结束 ====================
 
 // 预设切换
@@ -1723,6 +1813,14 @@ document.querySelectorAll('.timer-preset').forEach(btn => {
     btn.classList.add('active');
     timerState.workMinutes = parseInt(btn.dataset.minutes);
     timerState.breakMinutes = parseInt(btn.dataset.break);
+    // 追踪使用的模式
+    if (!data.timerModesUsed) data.timerModesUsed = [];
+    const mode = `${timerState.workMinutes}/${timerState.breakMinutes}`;
+    if (!data.timerModesUsed.includes(mode)) {
+      data.timerModesUsed.push(mode);
+      saveData(data);
+      checkAchievements();
+    }
     resetTimer();
   });
 });
@@ -2115,8 +2213,6 @@ function init() {
     });
   }
 
-  // 追踪回归（中断后重新学习）
-  trackComeback();
   checkAchievements();
 }
 
