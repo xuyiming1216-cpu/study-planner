@@ -641,7 +641,7 @@ body::before {
 .achievement.locked:hover { opacity: 0.7; }
 .achievement .ach-icon { font-size: 2rem; display: block; }
 .achievement .ach-name { font-size: 0.7rem; font-weight: 600; margin-top: 4px; }
-.achievement .ach-check { font-size: 0.8rem; color: var(--success); }
+.achievement .ach-check { font-size: 0.6rem; color: var(--text-light); font-weight: 600; }
 .achievement.secret {
   border: 1.5px dashed rgba(167,139,250,0.5);
   background: linear-gradient(135deg, rgba(167,139,250,0.06), rgba(244,114,182,0.04));
@@ -1565,16 +1565,37 @@ function navigateMonth(delta) {
 
 function renderAchievements() {
   const container = document.getElementById('achievements');
+  const MAX_DISPLAY = 8;
+
+  // 分离已解锁和未解锁
+  const unlockedList = ACHIEVEMENTS
+    .filter(a => !!data.achievements[a.id])
+    .sort((a, b) => (data.achievements[b.id] || 0) - (data.achievements[a.id] || 0)); // 时间倒序
+
+  const lockedList = ACHIEVEMENTS
+    .filter(a => !data.achievements[a.id])
+    .sort((a, b) => (a.hidden ? 1 : 0) - (b.hidden ? 1 : 0)); // 隐藏成就排最后
+
+  // 组合：优先已解锁，空缺用未解锁可见成就填充
+  const visibleLocked = lockedList.filter(a => !a.hidden);
+  const display = [...unlockedList, ...visibleLocked].slice(0, MAX_DISPLAY);
+
   let html = '';
-  ACHIEVEMENTS.forEach(ach => {
+  display.forEach(ach => {
     const unlocked = !!data.achievements[ach.id];
     const isHidden = ach.hidden && !unlocked;
+    const unlockTime = data.achievements[ach.id];
+    let timeStr = '';
+    if (unlocked && unlockTime) {
+      const d = new Date(unlockTime);
+      timeStr = `${d.getMonth()+1}/${d.getDate()}`;
+    }
     html += `
       <div class="achievement ${unlocked ? 'unlocked' : 'locked'} ${isHidden ? 'secret' : ''}"
-           title="${isHidden ? '🔮 隐藏成就：条件未知，探索中...' : ach.desc}">
+           title="${isHidden ? '🔮 隐藏成就：条件未知' : ach.desc + (timeStr ? ' · ' + timeStr + ' 解锁' : '')}">
         <span class="ach-icon">${isHidden ? '❓' : ach.icon}</span>
         <div class="ach-name">${isHidden ? '???' : ach.name}</div>
-        ${unlocked ? '<div class="ach-check">✅</div>'
+        ${unlocked ? `<div class="ach-check">${timeStr}</div>`
           : (isHidden ? '<div style="font-size:0.7rem;color:#a78bfa;">🔮</div>'
           : '<div style="font-size:0.7rem;color:#ccc;">🔒</div>')}
       </div>`;
@@ -1582,11 +1603,12 @@ function renderAchievements() {
   container.innerHTML = html;
 
   // 更新计数
-  const unlockedCount = ACHIEVEMENTS.filter(a => !!data.achievements[a.id]).length;
+  const unlockedCount = unlockedList.length;
   const hiddenCount = ACHIEVEMENTS.filter(a => a.hidden).length;
   const visibleTotal = ACHIEVEMENTS.length;
+  const hidden = display.length < ACHIEVEMENTS.length ? ` · 只显示前${MAX_DISPLAY}个` : '';
   const el = document.getElementById('achievementCount');
-  if (el) el.textContent = `（已解锁 ${unlockedCount}/${visibleTotal}，含 ${hiddenCount} 个隐藏成就）`;
+  if (el) el.textContent = `（已解锁 ${unlockedCount}/${visibleTotal}）${hidden}`;
 }
 
 function renderAchievementsPage() {
