@@ -626,6 +626,32 @@ body::before {
   100% { transform: scale(1); }
 }
 
+/* ========== 成就列表页 ========== */
+.ach-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  background: rgba(255,255,255,0.5);
+  transition: var(--transition);
+}
+.ach-list-item.unlocked { background: rgba(255,255,255,0.8); }
+.ach-list-item.locked { opacity: 0.55; filter: grayscale(1); }
+.ach-list-item.secret-item {
+  border: 1.5px dashed rgba(167,139,250,0.5);
+  background: linear-gradient(135deg, rgba(167,139,250,0.04), rgba(244,114,182,0.03));
+  filter: none;
+  opacity: 0.7;
+}
+.ach-list-icon { font-size: 1.8rem; min-width: 44px; text-align: center; }
+.ach-list-info { flex: 1; }
+.ach-list-name { font-weight: 700; font-size: 0.9rem; }
+.ach-list-desc { font-size: 0.75rem; color: var(--text-light); margin-top: 2px; }
+.ach-list-time { font-size: 0.7rem; color: var(--primary); margin-top: 2px; }
+.ach-list-status { font-size: 1.1rem; }
+
 /* ========== 语录 ========== */
 .quote-card {
   text-align: center;
@@ -768,6 +794,9 @@ body::before {
     <button class="nav-tab" data-panel="log">
       <span class="tab-icon">📝</span> 记录
     </button>
+    <button class="nav-tab" data-panel="achievements">
+      <span class="tab-icon">🏆</span> 成就
+    </button>
   </nav>
 
   <!-- ==================== 仪表盘面板 ==================== -->
@@ -832,7 +861,10 @@ body::before {
 
     <!-- 成就 -->
     <div class="card">
-      <div class="card-header"><span class="icon">🏆</span> 成就徽章 <span style="font-size:0.75rem;color:var(--text-light);font-weight:400;" id="achievementCount"></span></div>
+      <div class="card-header" style="cursor:pointer;" onclick="document.querySelector('[data-panel=achievements]').click()">
+        <span class="icon">🏆</span> 成就徽章 <span style="font-size:0.75rem;color:var(--text-light);font-weight:400;" id="achievementCount"></span>
+        <span style="margin-left:auto;font-size:0.7rem;color:var(--primary);">查看全部 →</span>
+      </div>
       <div style="font-size:0.72rem;color:var(--text-light);margin-bottom:8px;">🔮 带紫色虚线边框的是隐藏成就，解锁条件保密哦～</div>
       <div class="achievements-grid" id="achievements"></div>
     </div>
@@ -940,6 +972,17 @@ body::before {
         <span class="empty-icon">📝</span>
         <p>还没有学习记录～<br>完成番茄钟后会自动记录，也可以手动添加！</p>
       </div>
+    </div>
+  </section>
+
+  <!-- ==================== 成就面板 ==================== -->
+  <section class="panel" id="panel-achievements">
+    <div class="card">
+      <div class="card-header"><span class="icon">🏆</span> 成就总览 <span style="font-size:0.8rem;color:var(--text-light);font-weight:400;" id="achPageCount"></span></div>
+      <div style="font-size:0.78rem;color:var(--text-light);margin-bottom:12px;">
+        🔮 带紫色虚线的为隐藏成就 — 条件保密，只能靠摸索解锁哦～
+      </div>
+      <div id="achievementsList"></div>
     </div>
   </section>
 </div>
@@ -1232,6 +1275,7 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
     if (tab.dataset.panel === 'dashboard') refreshDashboard();
     if (tab.dataset.panel === 'goals') renderGoals();
     if (tab.dataset.panel === 'log') renderLogs();
+    if (tab.dataset.panel === 'achievements') renderAchievementsPage();
   });
 });
 
@@ -1413,6 +1457,43 @@ function renderAchievements() {
   const visibleTotal = ACHIEVEMENTS.length;
   const el = document.getElementById('achievementCount');
   if (el) el.textContent = `（已解锁 ${unlockedCount}/${visibleTotal}，含 ${hiddenCount} 个隐藏成就）`;
+}
+
+function renderAchievementsPage() {
+  const container = document.getElementById('achievementsList');
+  const unlockedCount = ACHIEVEMENTS.filter(a => !!data.achievements[a.id]).length;
+  const total = ACHIEVEMENTS.length;
+
+  // 更新计数
+  const countEl = document.getElementById('achPageCount');
+  if (countEl) countEl.textContent = `（${unlockedCount}/${total}）`;
+
+  let html = '';
+  ACHIEVEMENTS.forEach(ach => {
+    const unlocked = !!data.achievements[ach.id];
+    const isSecret = ach.hidden && !unlocked;
+    const unlockTime = data.achievements[ach.id];
+
+    // 格式化解锁时间
+    let timeStr = '';
+    if (unlocked && unlockTime) {
+      const d = new Date(unlockTime);
+      timeStr = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+
+    html += `
+      <div class="ach-list-item ${unlocked ? 'unlocked' : 'locked'} ${isSecret ? 'secret-item' : ''}">
+        <div class="ach-list-icon">${isSecret ? '❓' : ach.icon}</div>
+        <div class="ach-list-info">
+          <div class="ach-list-name">${isSecret ? '???' : ach.name}</div>
+          <div class="ach-list-desc">${isSecret ? '🔮 隐藏成就 · 条件保密' : ach.desc}</div>
+          ${unlocked ? `<div class="ach-list-time">🎉 ${timeStr} 解锁</div>` : ''}
+        </div>
+        <div class="ach-list-status">${unlocked ? '✅' : (isSecret ? '🔮' : '🔒')}</div>
+      </div>`;
+  });
+
+  container.innerHTML = html;
 }
 
 // ==================== 番茄钟 ====================
