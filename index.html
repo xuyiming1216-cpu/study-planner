@@ -477,6 +477,14 @@ body::before {
   background: linear-gradient(90deg, var(--primary), var(--accent));
 }
 .progress-fill.complete { background: linear-gradient(90deg, var(--success), #6ee7b7); }
+.progress-fill.overkill {
+  background: linear-gradient(90deg, var(--warning), #f59e0b);
+  animation: overkillGlow 1.5s ease-in-out infinite;
+}
+@keyframes overkillGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(251,191,36,0.4); }
+  50% { box-shadow: 0 0 18px rgba(251,191,36,0.8); }
+}
 .goal-stats { font-size: 0.78rem; color: var(--text-light); }
 .goal-controls {
   display: flex;
@@ -1727,13 +1735,13 @@ function setGoalProgress(id, value) {
   if (!goal) return;
   const num = parseInt(value);
   if (isNaN(num)) { showToast('⚠️ 请输入有效数字'); return; }
-  if (num < 0 || num > goal.target) { showToast(`⚠️ 请输入 0~${goal.target} 之间的数字`); return; }
+  if (num < 0) { showToast('⚠️ 请输入不小于0的数字'); return; }
   applyGoalProgress(goal, num);
 }
 
 function applyGoalProgress(goal, newValue) {
   const wasComplete = goal.current >= goal.target;
-  goal.current = Math.max(0, Math.min(goal.target, newValue));
+  goal.current = Math.max(0, newValue); // 允许超过目标
   const isComplete = goal.current >= goal.target;
   if (isComplete && !wasComplete) {
     data.goalsCompleted = (data.goalsCompleted || 0) + 1;
@@ -1774,20 +1782,21 @@ function renderGoals() {
   data.goals.forEach(goal => {
     const percent = Math.min(100, (goal.current / goal.target) * 100);
     const isComplete = goal.current >= goal.target;
+    const isOver = goal.current > goal.target;
     html += `
       <div class="goal-item">
         <div class="goal-header">
-          <div class="goal-title">${goal.emoji} ${goal.name}</div>
+          <div class="goal-title">${goal.emoji} ${goal.name}${isOver ? ' <span style="font-size:0.7rem;background:#fbbf24;color:#fff;padding:2px 6px;border-radius:50px;">🔥超额完成!</span>' : ''}</div>
           <span class="goal-badge ${badgeClass[goal.type] || 'badge-daily'}">${badgeLabel[goal.type] || goal.type}</span>
         </div>
         <div class="progress-bar">
-          <div class="progress-fill ${isComplete ? 'complete' : ''}" style="width:${percent}%"></div>
+          <div class="progress-fill ${isComplete ? 'complete' : ''}${isOver ? ' overkill' : ''}" style="width:${percent}%"></div>
         </div>
         <div class="goal-controls">
-          <div class="goal-stats">${goal.current} / ${goal.target} ${goal.unit}（${percent.toFixed(0)}%）</div>
+          <div class="goal-stats">${goal.current} / ${goal.target} ${goal.unit}（${(goal.current/goal.target*100).toFixed(0)}%）</div>
           <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
             <input type="number" class="goal-input" id="goalInput_${goal.id}"
-              placeholder="数量" min="0" max="${goal.target}"
+              placeholder="数量" min="0"
               onkeydown="if(event.key==='Enter')setGoalProgress(${goal.id},this.value)">
             <button class="btn btn-primary btn-sm" onclick="setGoalProgress(${goal.id},document.getElementById('goalInput_${goal.id}').value)" style="padding:4px 10px;font-size:0.75rem;">✅ 设置</button>
             <button class="btn btn-sm" onclick="updateGoalProgress(${goal.id}, 1)" style="padding:4px 8px;font-size:0.7rem;background:#e0e7ff;color:var(--primary);border:none;border-radius:6px;cursor:pointer;">+1</button>
