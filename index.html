@@ -371,21 +371,6 @@ body::before {
 .calendar-day.heat-cell.heat-5 { background: #fdba74 !important; }
 .calendar-day.heat-cell.heat-6 { background: #f87171 !important; }
 
-/* 周视图 */
-.calendar-grid.week-view .calendar-day {
-  min-height: 44px;
-  font-size: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 4px;
-}
-.calendar-day .day-minutes {
-  font-size: 0.55rem;
-  font-weight: 600;
-  color: var(--primary);
-}
-
 .calendar-nav {
   display: flex;
   align-items: center;
@@ -1773,7 +1758,6 @@ const MONTH_NAMES = ['1月','2月','3月','4月','5月','6月','7月','8月','9�
 
 function switchCalMode(mode) {
   calMode = mode;
-  calWeekOffset = 0;
   document.querySelectorAll('.cal-mode-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.mode === mode);
   });
@@ -1860,6 +1844,13 @@ function renderMonthView() {
 }
 
 // ====== 周视图 ======
+function formatTimeHM(minutes) {
+  if (minutes <= 0) return '0';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h > 0 ? (m > 0 ? `${h}h${m}m` : `${h}h`) : `${m}m`;
+}
+
 // ====== 图表视图 ======
 function renderCharts() {
   const grid = document.getElementById('calendarGrid');
@@ -1870,7 +1861,6 @@ function renderCharts() {
   title.textContent = '📊 学习数据可视化';
   stats.textContent = '';
 
-  // 科目分布数据
   const subjectMap = {};
   data.logs.forEach(l => {
     const s = l.subject || '其他';
@@ -1879,80 +1869,123 @@ function renderCharts() {
   const subjects = Object.entries(subjectMap).sort((a, b) => b[1] - a[1]);
   const totalMin = subjects.reduce((s, [, m]) => s + m, 0);
 
-  // 本月每日数据
   const today = new Date();
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
   const dailyData = [];
-  for (let d = 1; d <= new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate(); d++) {
+  for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     dailyData.push({ day: d, min: getDailyMinutes(dateStr) });
   }
+
+  // 上周均值
+  let lastWeekAvg = 0;
+  const weekAgo = new Date(today);
+  weekAgo.setDate(today.getDate() - 7);
+  let weekSum = 0, weekDays = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekAgo);
+    d.setDate(weekAgo.getDate() + i);
+    const ds = d.toISOString().split('T')[0];
+    const m = getDailyMinutes(ds);
+    if (m > 0) { weekSum += m; weekDays++; }
+  }
+  if (weekDays > 0) lastWeekAvg = Math.round(weekSum / weekDays);
 
   const colors = ['#6366f1','#f472b6','#34d399','#fbbf24','#818cf8','#fb923c','#a78bfa','#6ee7b7'];
 
   let html = '<div style="display:flex;gap:16px;flex-wrap:wrap;">';
 
-  // ===== 饼图（科目分布） =====
-  html += '<div style="flex:1;min-width:240px;background:white;border-radius:12px;padding:16px;text-align:center;">';
-  html += '<div style="font-weight:700;font-size:0.85rem;margin-bottom:10px;">📊 科目分布</div>';
+  // ===== 饼图 =====
+  html += '<div style="flex:1;min-width:280px;background:white;border-radius:12px;padding:16px;text-align:center;">';
+  html += '<div style="font-weight:700;font-size:0.85rem;margin-bottom:8px;">📊 科目分布</div>';
   if (totalMin === 0) {
     html += '<div style="padding:40px;color:var(--text-light);">暂无学习数据</div>';
   } else {
-    // SVG 饼图
-    const cx = 90, cy = 90, r = 70;
-    html += `<svg width="200" height="200" viewBox="0 0 180 180" style="display:block;margin:0 auto;">`;
+    const cx = 100, cy = 100, r = 80;
+    html += `<svg width="260" height="220" viewBox="0 0 200 200" style="display:block;margin:0 auto;">`;
     let angle = -Math.PI / 2;
     subjects.forEach(([name, min], i) => {
       const slice = (min / totalMin) * Math.PI * 2;
+      if (slice < 0.05) { angle += slice; return; } // 太小跳过
+      const midAngle = angle + slice / 2;
       const x1 = cx + r * Math.cos(angle);
       const y1 = cy + r * Math.sin(angle);
       const x2 = cx + r * Math.cos(angle + slice);
       const y2 = cy + r * Math.sin(angle + slice);
       const large = slice > Math.PI ? 1 : 0;
-      html += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z" fill="${colors[i%colors.length]}" stroke="white" stroke-width="1.5"/>`;
+      html += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z" fill="${colors[i%colors.length]}" stroke="white" stroke-width="2"/>`;
+      // 标签在扇形中间
+      const lx = cx + r * 0.6 * Math.cos(midAngle);
+      const ly = cy + r * 0.6 * Math.sin(midAngle);
+      const pct = ((min / totalMin) * 100).toFixed(0);
+      html += `<text x="${lx}" y="${ly}" font-size="8" fill="white" font-weight="700" text-anchor="middle" dominant-baseline="central">${name.length>2?name.slice(0,2):name}</text>`;
+      html += `<text x="${lx}" y="${ly+10}" font-size="6.5" fill="rgba(255,255,255,0.85)" text-anchor="middle">${pct}%</text>`;
       angle += slice;
     });
     html += '</svg>';
-
-    // 图例
-    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:8px;">';
+    // 底部图例
+    html += '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:6px;">';
     subjects.forEach(([name, min], i) => {
-      const pct = ((min / totalMin) * 100).toFixed(0);
-      html += `<span style="font-size:0.65rem;display:flex;align-items:center;gap:3px;"><span style="width:8px;height:8px;border-radius:2px;background:${colors[i%colors.length]};display:inline-block;"></span>${name} ${pct}%</span>`;
+      html += `<span style="font-size:0.62rem;display:flex;align-items:center;gap:3px;"><span style="width:8px;height:8px;border-radius:2px;background:${colors[i%colors.length]};display:inline-block;"></span>${name} ${formatTimeHM(min)}</span>`;
     });
     html += '</div>';
   }
   html += '</div>';
 
-  // ===== 柱状图（本月每日） =====
-  html += '<div style="flex:2;min-width:300px;background:white;border-radius:12px;padding:16px;text-align:center;">';
-  html += `<div style="font-weight:700;font-size:0.85rem;margin-bottom:10px;">📈 本月每日学习（${today.getMonth()+1}月）</div>`;
-  const maxMin = Math.max(1, ...dailyData.map(d => d.min));
-  const barW = Math.max(6, Math.floor(340 / dailyData.length));
-  html += `<svg width="${Math.max(300, dailyData.length * barW + 30)}" height="160" viewBox="0 0 ${dailyData.length * barW + 30} 160" style="display:block;margin:0 auto;">`;
-  // Y轴参考线
-  [25, 50, 75].forEach(pct => {
-    const y = 140 - (pct / 100) * 120;
-    html += `<line x1="0" y1="${y}" x2="${dailyData.length * barW + 30}" y2="${y}" stroke="#f1f5f9" stroke-width="1"/>`;
-    html += `<text x="2" y="${y-2}" font-size="8" fill="#94a3b8">${Math.round(maxMin*pct/100)}m</text>`;
-  });
+  // ===== 柱状图 =====
+  html += '<div style="flex:2;min-width:360px;background:white;border-radius:12px;padding:16px;text-align:center;">';
+  html += `<div style="font-weight:700;font-size:0.85rem;margin-bottom:8px;">📈 本月每日学习（${today.getMonth()+1}月）</div>`;
+  const maxMin = Math.max(lastWeekAvg || 1, ...dailyData.map(d => d.min));
+  const padL = 42, padR = 10, padT = 10, padB = 32;
+  const chartW = 560, chartH = 240;
+  const plotW = chartW - padL - padR;
+  const plotH = chartH - padT - padB;
+  const barW = Math.max(10, Math.floor(plotW / dailyData.length) - 2);
+
+  html += `<svg width="100%" height="260" viewBox="0 0 ${chartW} ${chartH}" style="display:block;margin:0 auto;">`;
+
+  // Y轴网格线和标签
+  const ySteps = 4;
+  for (let i = 0; i <= ySteps; i++) {
+    const val = (maxMin / ySteps) * i;
+    const y = padT + plotH - (val / maxMin) * plotH;
+    html += `<line x1="${padL}" y1="${y}" x2="${chartW-padR}" y2="${y}" stroke="${i===0?'#e2e8f0':'#f1f5f9'}" stroke-width="1"/>`;
+    html += `<text x="${padL-4}" y="${y+3}" font-size="9" fill="#94a3b8" text-anchor="end">${formatTimeHM(Math.round(val))}</text>`;
+  }
+
+  // 上周均值虚线
+  if (lastWeekAvg > 0) {
+    const avgY = padT + plotH - (lastWeekAvg / maxMin) * plotH;
+    html += `<line x1="${padL}" y1="${avgY}" x2="${chartW-padR}" y2="${avgY}" stroke="#f87171" stroke-width="1.5" stroke-dasharray="6,4"/>`;
+    html += `<text x="${chartW-padR}" y="${avgY-4}" font-size="8" fill="#f87171" text-anchor="end" font-weight="600">上周均值 ${formatTimeHM(lastWeekAvg)}</text>`;
+  }
+
+  // 柱状图
   dailyData.forEach((d, i) => {
-    const h = (d.min / maxMin) * 120;
-    const x = i * barW + 5;
-    const y = 140 - h;
+    const h = (d.min / maxMin) * plotH;
+    const x = padL + i * (plotW / dailyData.length) + 1;
+    const y = padT + plotH - h;
     const isToday = d.day === today.getDate();
-    html += `<rect x="${x}" y="${y}" width="${barW-2}" height="${h}" rx="2" fill="${isToday ? '#6366f1' : '#a5b4fc'}" opacity="${isToday ? 1 : 0.7}"><title>${d.day}日: ${d.min}分钟</title></rect>`;
+    html += `<rect x="${x}" y="${y}" width="${barW}" height="${Math.max(h, d.min>0?2:0)}" rx="3" fill="${isToday ? '#6366f1' : '#a5b4fc'}" opacity="${isToday ? 1 : 0.65}"><title>${d.day}日: ${formatTimeHM(d.min)}</title></rect>`;
   });
+
+  // X轴标签（每5天标一个）
+  for (let d = 1; d <= daysInMonth; d++) {
+    if (d % 5 === 1 || d === daysInMonth) {
+      const x = padL + (d - 1) * (plotW / dailyData.length) + barW / 2;
+      html += `<text x="${x}" y="${padT+plotH+14}" font-size="8" fill="#94a3b8" text-anchor="middle">${today.getMonth()+1}/${d}</text>`;
+    }
+  }
+
   html += '</svg>';
   html += '</div>';
 
   html += '</div>';
   grid.innerHTML = html;
 
-  // 总结
   const totalH = Math.floor(totalMin / 60);
   const totalM = totalMin % 60;
-  legend.innerHTML = `<span style="font-size:0.7rem;color:var(--text-light);">总学习 ${totalH}h${totalM}m · ${subjects.length} 个科目 · ${data.logs.length} 条记录</span>`;
+  legend.innerHTML = `<span style="font-size:0.7rem;color:var(--text-light);">总学习 ${totalH}h${totalM}m · ${subjects.length}科目 · ${data.logs.length}条记录</span>`;
 }
 function renderHeatmap() {
   const grid = document.getElementById('calendarGrid');
@@ -2136,8 +2169,7 @@ let timerState = {
 // 日历状态
 let calendarMonth = new Date().getMonth(); // 0-11
 let calendarYear = new Date().getFullYear();
-let calMode = 'month'; // month | week | heat
-let calWeekOffset = 0; // 周视图偏移：0=本周，负数=过去，正数=未来
+let calMode = 'month'; // month | heat | chart：0=本周，负数=过去，正数=未来
 
 function updateTimerDisplay() {
   const mins = Math.floor(timerState.secondsLeft / 60);
