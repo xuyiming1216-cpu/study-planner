@@ -707,6 +707,42 @@ body::before {
 .ach-list-desc { font-size: 0.75rem; color: var(--text-light); margin-top: 2px; }
 .ach-list-time { font-size: 0.7rem; color: var(--primary); margin-top: 2px; }
 .ach-list-status { font-size: 1.1rem; }
+.ach-list-trophy { font-size: 1rem; min-width: 28px; text-align: center; }
+
+/* 奖杯边框色 */
+.ach-list-item.trophy-border-platinum.unlocked {
+  border: 2px solid rgba(167,139,250,0.4);
+  background: linear-gradient(135deg, rgba(167,139,250,0.08), rgba(244,114,182,0.06));
+}
+.ach-list-item.trophy-border-gold.unlocked {
+  border: 2px solid rgba(251,191,36,0.3);
+  background: linear-gradient(135deg, rgba(251,191,36,0.06), rgba(255,255,255,0.5));
+}
+.ach-list-item.trophy-border-silver.unlocked {
+  border: 2px solid rgba(148,163,184,0.3);
+  background: linear-gradient(135deg, rgba(148,163,184,0.05), rgba(255,255,255,0.5));
+}
+
+/* 仪表盘成就奖杯标签 */
+.ach-trophy {
+  position: absolute;
+  top: -6px; left: -4px;
+  font-size: 0.65rem;
+  pointer-events: none;
+}
+.achievement { position: relative; }
+
+/* 白金解锁动画 */
+.achievement.trophy-platinum.unlocked {
+  animation: platinumGlow 2s ease-in-out infinite;
+  border: 2px solid rgba(167,139,250,0.5);
+}
+@keyframes platinumGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(167,139,250,0.3); }
+  50% { box-shadow: 0 0 24px rgba(244,114,182,0.5), 0 0 8px rgba(167,139,250,0.4); }
+}
+.achievement.trophy-gold.unlocked { border: 1.5px solid rgba(251,191,36,0.35); }
+.achievement.trophy-silver.unlocked { border: 1.5px solid rgba(148,163,184,0.25); }
 
 /* ========== 语录 ========== */
 .quote-card {
@@ -1157,64 +1193,81 @@ function getNextLevel(hours) {
 }
 
 // ==================== 成就系统 ====================
+// 奖杯等级: 🥉bronze 🥈silver 🥇gold 🏆platinum
 const ACHIEVEMENTS = [
-  // ---- 番茄钟系列 ----
-  { id: 'first_pomodoro', name: '初次番茄', icon: '🍅', desc: '完成第一个番茄钟', check: d => d.totalMinutes >= 25 },
-  { id: 'pomodoro_10', name: '番茄达人', icon: '🍝', desc: '累计完成10个番茄钟', check: d => d.totalMinutes >= 250 },
-  { id: 'pomodoro_50', name: '番茄大师', icon: '🍕', desc: '累计完成50个番茄钟', check: d => d.totalMinutes >= 1250 },
-  { id: 'pomodoro_100', name: '番茄之王', icon: '👑', desc: '累计完成100个番茄钟', check: d => d.totalMinutes >= 2500 },
-  { id: 'pomodoro_200', name: '番茄传说', icon: '🌟', desc: '累计完成200个番茄钟', check: d => d.totalMinutes >= 5000 },
+  // ====== 🥉 铜杯：初尝甜头 ======
+  { id: 'first_pomodoro', name: '初次番茄', icon: '🍅', desc: '完成第一个番茄钟', trophy: 'bronze', check: d => d.totalMinutes >= 25 },
+  { id: 'streak_3', name: '三天之约', icon: '🔥', desc: '连续学习3天', trophy: 'bronze', check: d => d.streak >= 3 },
+  { id: 'hours_10', name: '初窥门径', icon: '⏰', desc: '累计学习10小时', trophy: 'bronze', check: d => d.totalMinutes >= 600 },
+  { id: 'goal_first', name: '目标达成', icon: '✅', desc: '完成第一个目标', trophy: 'bronze', check: d => d.goals.some(g => g.current >= g.target) },
+  { id: 'early_bird', name: '早起鸟儿', icon: '🌅', desc: '早上6点前学习', trophy: 'bronze', check: d => (d.earlyBird || false) },
+  { id: 'night_owl', name: '夜猫子', icon: '🦉', desc: '晚上11点后学习', trophy: 'bronze', check: d => (d.nightOwl || false) },
+  { id: 'click_mascot', name: '戳戳乐', icon: '🐱', desc: '点击吉祥物20次', trophy: 'bronze', hidden: true, check: d => (d.mascotClicks || 0) >= 20 },
+  { id: 'perfect_pomodoros', name: '完美五连', icon: '✨', desc: '不中断完成5个番茄钟', trophy: 'bronze', hidden: true, check: d => (d.perfectPomodoros || 0) >= 5 },
+  { id: 'lucky_number', name: '幸运数字', icon: '🍀', desc: '当天学习时长恰好是66或88分钟', trophy: 'bronze', hidden: true, check: d => (d.luckyNumber || false) },
+  { id: 'timer_master', name: '模式大师', icon: '🎛️', desc: '使用过所有番茄钟模式', trophy: 'bronze', hidden: true, check: d => (d.timerModesUsed || []).length >= 4 },
 
-  // ---- 连续打卡系列 ----
-  { id: 'streak_3', name: '三天之约', icon: '🔥', desc: '连续学习3天', check: d => d.streak >= 3 },
-  { id: 'streak_7', name: '一周坚持', icon: '💪', desc: '连续学习7天', check: d => d.streak >= 7 },
-  { id: 'streak_14', name: '半月之恒', icon: '🌙', desc: '连续学习14天', check: d => d.streak >= 14 },
-  { id: 'streak_30', name: '月度强者', icon: '📅', desc: '连续学习30天', check: d => d.streak >= 30 },
-  { id: 'streak_60', name: '双月霸主', icon: '🐉', desc: '连续学习60天', check: d => d.streak >= 60 },
-  { id: 'streak_100', name: '百日筑基', icon: '🏛️', desc: '连续学习100天', check: d => d.streak >= 100 },
+  // ====== 🥈 银杯：渐入佳境 ======
+  { id: 'pomodoro_10', name: '番茄达人', icon: '🍝', desc: '累计完成10个番茄钟', trophy: 'silver', check: d => d.totalMinutes >= 250 },
+  { id: 'streak_7', name: '一周坚持', icon: '💪', desc: '连续学习7天', trophy: 'silver', check: d => d.streak >= 7 },
+  { id: 'streak_14', name: '半月之恒', icon: '🌙', desc: '连续学习14天', trophy: 'silver', check: d => d.streak >= 14 },
+  { id: 'hours_50', name: '半百之时', icon: '🏅', desc: '累计学习50小时', trophy: 'silver', check: d => d.totalMinutes >= 3000 },
+  { id: 'goal_5', name: '目标收割机', icon: '🎯', desc: '累计完成5个目标', trophy: 'silver', check: d => (d.goalsCompleted || 0) >= 5 },
+  { id: 'perfect_week', name: '完美一周', icon: '🌈', desc: '一周7天全部打卡', trophy: 'silver', check: d => checkPerfectWeek(d) },
+  { id: 'marathon', name: '学习马拉松', icon: '🏃', desc: '单次学习超过3小时', trophy: 'silver', check: d => (d.marathonDone || false) },
+  { id: 'triple_subject', name: '三箭齐发', icon: '🏹', desc: '一天内学习3个不同科目', trophy: 'silver', check: d => checkThreeSubjects(d) },
+  { id: 'early_and_late', name: '早出晚归', icon: '🌗', desc: '同一天既早起又熬夜学习', trophy: 'silver', check: d => (d.earlyLateSameDay || false) },
+  { id: 'log_50', name: '记录达人', icon: '📝', desc: '记录50条学习日志', trophy: 'silver', check: d => d.logs.length >= 50 },
+  { id: 'morning_person', name: '晨型人', icon: '☀️', desc: '连续7天早上8点前学习', trophy: 'silver', check: d => (d.morningStreak || 0) >= 7 },
+  { id: 'secret_rainbow', name: '彩虹学者', icon: '🌈', desc: '学遍英语、数学、政治、专业课', trophy: 'silver', hidden: true, check: d => checkAllSubjects(d) },
+  { id: 'weekend_warrior', name: '周末战神', icon: '⚔️', desc: '周末累计学习超过4小时', trophy: 'silver', hidden: true, check: d => (d.weekendWarrior || false) },
+  { id: 'midnight_oil', name: '燃烧的夜', icon: '🕯️', desc: '凌晨0-5点之间学习', trophy: 'silver', hidden: true, check: d => (d.midnightOil || false) },
+  { id: 'double_day', name: '双倍快乐', icon: '🎊', desc: '当天学习量达平均2倍以上', trophy: 'silver', hidden: true, check: d => (d.doubleDay || false) },
+  { id: 'silence_lover', name: '安静的力量', icon: '🤫', desc: '同时完成3个以上目标', trophy: 'silver', hidden: true, check: d => (d.silenceLover || false) },
+  { id: 'sunday_scholar', name: '周日不休', icon: '📖', desc: '连续4个周日坚持学习', trophy: 'silver', hidden: true, check: d => checkSundayStreak(d) },
 
-  // ---- 累计时长系列 ----
-  { id: 'hours_10', name: '初窥门径', icon: '⏰', desc: '累计学习10小时', check: d => d.totalMinutes >= 600 },
-  { id: 'hours_50', name: '半百之时', icon: '🏅', desc: '累计学习50小时', check: d => d.totalMinutes >= 3000 },
-  { id: 'hours_100', name: '百时之约', icon: '🎖', desc: '累计学习100小时', check: d => d.totalMinutes >= 6000 },
-  { id: 'hours_200', name: '两百里程碑', icon: '🏆', desc: '累计学习200小时', check: d => d.totalMinutes >= 12000 },
-  { id: 'hours_500', name: '五百大成', icon: '💎', desc: '累计学习500小时', check: d => d.totalMinutes >= 30000 },
-  { id: 'hours_1000', name: '千时封神', icon: '👼', desc: '累计学习1000小时', check: d => d.totalMinutes >= 60000 },
+  // ====== 🥇 金杯：登峰造极 ======
+  { id: 'pomodoro_50', name: '番茄大师', icon: '🍕', desc: '累计完成50个番茄钟', trophy: 'gold', check: d => d.totalMinutes >= 1250 },
+  { id: 'pomodoro_100', name: '番茄之王', icon: '👑', desc: '累计完成100个番茄钟', trophy: 'gold', check: d => d.totalMinutes >= 2500 },
+  { id: 'pomodoro_200', name: '番茄传说', icon: '🌟', desc: '累计完成200个番茄钟', trophy: 'gold', check: d => d.totalMinutes >= 5000 },
+  { id: 'streak_30', name: '月度强者', icon: '📅', desc: '连续学习30天', trophy: 'gold', check: d => d.streak >= 30 },
+  { id: 'streak_60', name: '双月霸主', icon: '🐉', desc: '连续学习60天', trophy: 'gold', check: d => d.streak >= 60 },
+  { id: 'streak_100', name: '百日筑基', icon: '🏛️', desc: '连续学习100天', trophy: 'gold', check: d => d.streak >= 100 },
+  { id: 'hours_100', name: '百时之约', icon: '🎖', desc: '累计学习100小时', trophy: 'gold', check: d => d.totalMinutes >= 6000 },
+  { id: 'hours_200', name: '两百里程碑', icon: '🏆', desc: '累计学习200小时', trophy: 'gold', check: d => d.totalMinutes >= 12000 },
+  { id: 'hours_500', name: '五百大成', icon: '💎', desc: '累计学习500小时', trophy: 'gold', check: d => d.totalMinutes >= 30000 },
+  { id: 'hours_1000', name: '千时封神', icon: '👼', desc: '累计学习1000小时', trophy: 'gold', check: d => d.totalMinutes >= 60000 },
+  { id: 'goal_20', name: '计划大师', icon: '📋', desc: '累计完成20个目标', trophy: 'gold', check: d => (d.goalsCompleted || 0) >= 20 },
+  { id: 'log_100', name: '史学家的执念', icon: '📚', desc: '记录100条学习日志', trophy: 'gold', check: d => d.logs.length >= 100 },
+  { id: 'full_house', name: '大满贯', icon: '🎰', desc: '累计100h+连续30天+50番茄', trophy: 'gold', hidden: true, check: d => checkFullHouse(d) },
+  { id: 'hardcore_mode', name: '硬核学霸', icon: '🦅', desc: '连续7天每天学习超3小时', trophy: 'gold', hidden: true, check: d => checkHardcoreMode(d) },
 
-  // ---- 目标系列 ----
-  { id: 'goal_first', name: '目标达成', icon: '✅', desc: '完成第一个目标', check: d => d.goals.some(g => g.current >= g.target) },
-  { id: 'goal_5', name: '目标收割机', icon: '🎯', desc: '累计完成5个目标', check: d => (d.goalsCompleted || 0) >= 5 },
-  { id: 'goal_20', name: '计划大师', icon: '📋', desc: '累计完成20个目标', check: d => (d.goalsCompleted || 0) >= 20 },
-
-  // ---- 时间段系列 ----
-  { id: 'early_bird', name: '早起鸟儿', icon: '🌅', desc: '早上6点前学习', check: d => (d.earlyBird || false) },
-  { id: 'morning_person', name: '晨型人', icon: '☀️', desc: '连续7天早上8点前学习', check: d => (d.morningStreak || 0) >= 7 },
-  { id: 'night_owl', name: '夜猫子', icon: '🦉', desc: '晚上11点后学习', check: d => (d.nightOwl || false) },
-
-  // ---- 勤奋系列 ----
-  { id: 'perfect_week', name: '完美一周', icon: '🌈', desc: '一周7天全部打卡', check: d => checkPerfectWeek(d) },
-  { id: 'marathon', name: '学习马拉松', icon: '🏃', desc: '单次学习超过3小时', check: d => (d.marathonDone || false) },
-  { id: 'triple_subject', name: '三箭齐发', icon: '🏹', desc: '一天内学习3个不同科目', check: d => checkThreeSubjects(d) },
-  { id: 'early_and_late', name: '早出晚归', icon: '🌗', desc: '同一天既早起又熬夜学习', check: d => (d.earlyLateSameDay || false) },
-
-  // ---- 记录系列 ----
-  { id: 'log_50', name: '记录达人', icon: '📝', desc: '记录50条学习日志', check: d => d.logs.length >= 50 },
-  { id: 'log_100', name: '史学家的执念', icon: '📚', desc: '记录100条学习日志', check: d => d.logs.length >= 100 },
-
-  // ======== 隐藏成就（locked时显示 ???） ========
-  { id: 'click_mascot', name: '戳戳乐', icon: '🐱', desc: '点击吉祥物20次', hidden: true, check: d => (d.mascotClicks || 0) >= 20 },
-  { id: 'secret_rainbow', name: '彩虹学者', icon: '🌈', desc: '学遍英语、数学、政治、专业课全部科目', hidden: true, check: d => checkAllSubjects(d) },
-  { id: 'weekend_warrior', name: '周末战神', icon: '⚔️', desc: '周末累计学习超过4小时', hidden: true, check: d => (d.weekendWarrior || false) },
-  { id: 'midnight_oil', name: '燃烧的夜', icon: '🕯️', desc: '凌晨0-5点之间学习', hidden: true, check: d => (d.midnightOil || false) },
-  { id: 'perfect_pomodoros', name: '完美五连', icon: '✨', desc: '不中断完成5个番茄钟', hidden: true, check: d => (d.perfectPomodoros || 0) >= 5 },
-  { id: 'hardcore_mode', name: '硬核学霸', icon: '🦅', desc: '连续7天每天学习超过3小时', hidden: true, check: d => checkHardcoreMode(d) },
-  { id: 'lucky_number', name: '幸运数字', icon: '🍀', desc: '当天学习时长恰好是66或88分钟', hidden: true, check: d => (d.luckyNumber || false) },
-  { id: 'full_house', name: '大满贯', icon: '🎰', desc: '同时满足：累计100小时+连续30天+50个番茄钟', hidden: true, check: d => checkFullHouse(d) },
-  { id: 'double_day', name: '双倍快乐', icon: '🎊', desc: '当天学习量达到平均水平的2倍以上', hidden: true, check: d => (d.doubleDay || false) },
-  { id: 'silence_lover', name: '安静的力量', icon: '🤫', desc: '同时完成3个以上目标', hidden: true, check: d => (d.silenceLover || false) },
-  { id: 'sunday_scholar', name: '周日不休', icon: '📖', desc: '连续4个周日都坚持学习', hidden: true, check: d => checkSundayStreak(d) },
-  { id: 'timer_master', name: '模式大师', icon: '🎛️', desc: '使用过所有番茄钟模式（25/45/50/15）', hidden: true, check: d => (d.timerModesUsed || []).length >= 4 },
+  // ====== 🏆 白金奖杯：全成就达成 ======
+  { id: 'platinum', name: '考研白金奖杯', icon: '🏆', desc: '解锁全部成就', trophy: 'platinum', check: d => checkPlatinum(d) },
 ];
+
+// 白金检查：除自身外全部解锁
+function checkPlatinum(d) {
+  return ACHIEVEMENTS.filter(a => a.id !== 'platinum').every(a => a.check(d));
+}
+
+// 奖杯图标
+function getTrophyIcon(trophy, unlocked) {
+  if (!unlocked || !trophy) return '';
+  const map = { bronze: '🥉', silver: '🥈', gold: '🥇', platinum: '🏆' };
+  return map[trophy] || '';
+}
+
+// 奖杯统计
+function getTrophyStats() {
+  const unlocked = ACHIEVEMENTS.filter(a => !!data.achievements[a.id]);
+  return {
+    bronze: { total: ACHIEVEMENTS.filter(a => a.trophy === 'bronze').length, done: unlocked.filter(a => a.trophy === 'bronze').length },
+    silver: { total: ACHIEVEMENTS.filter(a => a.trophy === 'silver').length, done: unlocked.filter(a => a.trophy === 'silver').length },
+    gold: { total: ACHIEVEMENTS.filter(a => a.trophy === 'gold').length, done: unlocked.filter(a => a.trophy === 'gold').length },
+    platinum: { total: 1, done: unlocked.filter(a => a.trophy === 'platinum').length },
+  };
+}
 
 // 辅助检测函数
 function checkPerfectWeek(d) {
@@ -1590,64 +1643,82 @@ function renderAchievements() {
     const unlocked = !!data.achievements[ach.id];
     const isHidden = ach.hidden && !unlocked;
     const unlockTime = data.achievements[ach.id];
+    const trophyIcon = getTrophyIcon(ach.trophy, unlocked);
     let timeStr = '';
     if (unlocked && unlockTime) {
       const d = new Date(unlockTime);
       timeStr = `${d.getMonth()+1}/${d.getDate()}`;
     }
     html += `
-      <div class="achievement ${unlocked ? 'unlocked' : 'locked'} ${isHidden ? 'secret' : ''}"
-           title="${isHidden ? '🔮 隐藏成就：条件未知' : ach.desc + (timeStr ? ' · ' + timeStr + ' 解锁' : '')}">
+      <div class="achievement ${unlocked ? 'unlocked' : 'locked'} ${isHidden ? 'secret' : ''} trophy-${ach.trophy || 'none'}"
+           title="${isHidden ? '🔮 隐藏成就：条件未知' : trophyIcon + ' ' + ach.desc + (timeStr ? ' · ' + timeStr + ' 解锁' : '')}">
+        <span class="ach-trophy">${unlocked ? trophyIcon : (isHidden ? '🔮' : '🔒')}</span>
         <span class="ach-icon">${isHidden ? '❓' : ach.icon}</span>
         <div class="ach-name">${isHidden ? '???' : ach.name}</div>
         ${unlocked ? `<div class="ach-check">${timeStr}</div>`
-          : (isHidden ? '<div style="font-size:0.7rem;color:#a78bfa;">🔮</div>'
-          : '<div style="font-size:0.7rem;color:#ccc;">🔒</div>')}
+          : '<div class="ach-check"></div>'}
       </div>`;
   });
   container.innerHTML = html;
 
-  // 更新计数
-  const unlockedCount = unlockedList.length;
-  const hiddenCount = ACHIEVEMENTS.filter(a => a.hidden).length;
-  const visibleTotal = ACHIEVEMENTS.length;
-  const hidden = display.length < ACHIEVEMENTS.length ? ` · 只显示前${MAX_DISPLAY}个` : '';
+  // 更新计数 - 奖杯统计
+  const stats = getTrophyStats();
+  const hidden = display.length < ACHIEVEMENTS.length ? ` · 仅显示${MAX_DISPLAY}个` : '';
   const el = document.getElementById('achievementCount');
-  if (el) el.textContent = `（已解锁 ${unlockedCount}/${visibleTotal}）${hidden}`;
+  if (el) el.innerHTML = `🥉${stats.bronze.done}/${stats.bronze.total} 🥈${stats.silver.done}/${stats.silver.total} 🥇${stats.gold.done}/${stats.gold.total} ${stats.platinum.done ? '🏆白金!' : '🏆0/1'}${hidden}`;
 }
 
 function renderAchievementsPage() {
   const container = document.getElementById('achievementsList');
-  const unlockedCount = ACHIEVEMENTS.filter(a => !!data.achievements[a.id]).length;
-  const total = ACHIEVEMENTS.length;
+  const stats = getTrophyStats();
+  const totalUnlocked = stats.bronze.done + stats.silver.done + stats.gold.done + stats.platinum.done;
+  const totalAll = ACHIEVEMENTS.length;
 
   // 更新计数
   const countEl = document.getElementById('achPageCount');
-  if (countEl) countEl.textContent = `（${unlockedCount}/${total}）`;
+  if (countEl) {
+    countEl.innerHTML = `🥉${stats.bronze.done}/${stats.bronze.total} 🥈${stats.silver.done}/${stats.silver.total} 🥇${stats.gold.done}/${stats.gold.total} 🏆${stats.platinum.done}/1 共${totalUnlocked}/${totalAll}`;
+  }
+
+  const trophyGroups = [
+    { key: 'platinum', label: '🏆 白金奖杯', color: '#a78bfa' },
+    { key: 'gold', label: '🥇 金奖杯', color: '#f59e0b' },
+    { key: 'silver', label: '🥈 银奖杯', color: '#94a3b8' },
+    { key: 'bronze', label: '🥉 铜奖杯', color: '#d97706' },
+  ];
 
   let html = '';
-  ACHIEVEMENTS.forEach(ach => {
-    const unlocked = !!data.achievements[ach.id];
-    const isSecret = ach.hidden && !unlocked;
-    const unlockTime = data.achievements[ach.id];
+  trophyGroups.forEach(group => {
+    const list = ACHIEVEMENTS.filter(a => a.trophy === group.key);
+    if (list.length === 0) return;
+    const done = list.filter(a => !!data.achievements[a.id]).length;
 
-    // 格式化解锁时间
-    let timeStr = '';
-    if (unlocked && unlockTime) {
-      const d = new Date(unlockTime);
-      timeStr = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    }
+    html += `<div style="font-size:0.85rem;font-weight:700;margin:16px 0 8px;color:${group.color};border-bottom:2px solid ${group.color}20;padding-bottom:4px;">${group.label}（${done}/${list.length}）</div>`;
 
-    html += `
-      <div class="ach-list-item ${unlocked ? 'unlocked' : 'locked'} ${isSecret ? 'secret-item' : ''}">
-        <div class="ach-list-icon">${isSecret ? '❓' : ach.icon}</div>
-        <div class="ach-list-info">
-          <div class="ach-list-name">${isSecret ? '???' : ach.name}</div>
-          <div class="ach-list-desc">${isSecret ? '🔮 隐藏成就 · 条件保密' : ach.desc}</div>
-          ${unlocked ? `<div class="ach-list-time">🎉 ${timeStr} 解锁</div>` : ''}
-        </div>
-        <div class="ach-list-status">${unlocked ? '✅' : (isSecret ? '🔮' : '🔒')}</div>
-      </div>`;
+    list.forEach(ach => {
+      const unlocked = !!data.achievements[ach.id];
+      const isSecret = ach.hidden && !unlocked;
+      const unlockTime = data.achievements[ach.id];
+      const trophyIcon = getTrophyIcon(ach.trophy, unlocked);
+
+      let timeStr = '';
+      if (unlocked && unlockTime) {
+        const d = new Date(unlockTime);
+        timeStr = `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+      }
+
+      html += `
+        <div class="ach-list-item ${unlocked ? 'unlocked' : 'locked'} ${isSecret ? 'secret-item' : ''} trophy-border-${ach.trophy}">
+          <div class="ach-list-trophy">${unlocked ? trophyIcon : (isSecret ? '🔮' : '🔒')}</div>
+          <div class="ach-list-icon">${isSecret ? '❓' : ach.icon}</div>
+          <div class="ach-list-info">
+            <div class="ach-list-name">${isSecret ? '???' : ach.name}</div>
+            <div class="ach-list-desc">${isSecret ? '🔮 隐藏成就 · 条件保密' : ach.desc}</div>
+            ${unlocked ? `<div class="ach-list-time">🎉 ${timeStr} 解锁</div>` : ''}
+          </div>
+          <div class="ach-list-status">${unlocked ? '✅' : (isSecret ? '🔮' : '🔒')}</div>
+        </div>`;
+    });
   });
 
   container.innerHTML = html;
