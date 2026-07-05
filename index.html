@@ -332,6 +332,59 @@ body::before {
 .stat-card .stat-label { font-size: 0.75rem; color: var(--text-light); margin-top: 2px; }
 
 /* ========== 日历 ========== */
+.cal-mode-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1.5px solid #e5e7eb;
+  background: white;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-light);
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+.cal-mode-btn.active {
+  border-color: var(--primary);
+  background: rgba(99,102,241,0.08);
+  color: var(--primary);
+}
+
+/* 热力图 */
+.calendar-grid.heatmap {
+  grid-template-columns: repeat(auto-fill, minmax(12px, 1fr));
+  gap: 2px;
+}
+.calendar-day.heat-cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  font-size: 0;
+  min-width: 0;
+}
+.calendar-day.heat-cell:hover { transform: scale(1.3); z-index: 2; }
+.heat-0 { background: #f1f5f9; }
+.heat-1 { background: #dbeafe; }
+.heat-2 { background: #93c5fd; }
+.heat-3 { background: #86efac; }
+.heat-4 { background: #fde68a; }
+.heat-5 { background: #fdba74; }
+.heat-6 { background: #f87171; }
+
+/* 周视图 */
+.calendar-grid.week-view .calendar-day {
+  min-height: 44px;
+  font-size: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px;
+}
+.calendar-day .day-minutes {
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
 .calendar-nav {
   display: flex;
   align-items: center;
@@ -1051,20 +1104,23 @@ body::before {
         <span>学习日历</span>
         <span style="margin-left:auto;font-size:0.75rem;color:var(--text-light);" id="calendarTotal">目标：坚持到2026.12.31 🎯</span>
       </div>
-      <div class="calendar-nav">
-        <button class="calendar-nav-btn" onclick="navigateMonth(-1)">◀</button>
-        <span class="calendar-month-title" id="calendarMonthTitle">2026年7月</span>
-        <button class="calendar-nav-btn" onclick="navigateMonth(1)">▶</button>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px;">
+        <div style="display:flex;gap:4px;">
+          <button class="cal-mode-btn active" data-mode="month" onclick="switchCalMode('month')">📅 月</button>
+          <button class="cal-mode-btn" data-mode="week" onclick="switchCalMode('week')">📆 周</button>
+          <button class="cal-mode-btn" data-mode="heat" onclick="switchCalMode('heat')">🌡️ 热力</button>
+        </div>
+        <div class="calendar-nav" id="calNav">
+          <button class="calendar-nav-btn" onclick="calNavigate(-1)">◀</button>
+          <span class="calendar-month-title" id="calendarMonthTitle">2026年7月</span>
+          <button class="calendar-nav-btn" onclick="calNavigate(1)">▶</button>
+        </div>
       </div>
-      <div class="calendar-weekdays">
+      <div class="calendar-weekdays" id="calWeekdays">
         <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
       </div>
       <div class="calendar-grid" id="calendarGrid"></div>
-      <div class="calendar-legend">
-        <span><span class="legend-dot studied"></span> 已学习</span>
-        <span><span class="legend-dot today-dot"></span> 今天</span>
-        <span><span class="legend-dot future"></span> 待打卡</span>
-      </div>
+      <div class="calendar-legend" id="calendarLegend"></div>
       <div style="text-align:center;margin-top:8px;font-size:0.75rem;color:var(--text-light);" id="calendarStats"></div>
     </div>
 
@@ -1688,120 +1744,222 @@ function getDailyMinutes(dateStr) {
     .reduce((sum, l) => sum + l.minutes, 0);
 }
 
+function heatColor(minutes) {
+  if (minutes <= 0) return 'heat-0';
+  if (minutes < 30) return 'heat-1';
+  if (minutes < 60) return 'heat-2';
+  if (minutes < 120) return 'heat-3';
+  if (minutes < 180) return 'heat-4';
+  if (minutes < 300) return 'heat-5';
+  return 'heat-6';
+}
+
+function heatLabel(level) {
+  const labels = ['0', '<30m', '<1h', '<2h', '<3h', '<5h', '5h+'];
+  return labels[level] || '';
+}
+
+const MILESTONES = [200, 100, 50, 30, 10, 7, 3, 1];
+const MONTH_NAMES = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+function switchCalMode(mode) {
+  calMode = mode;
+  calWeekOffset = 0;
+  document.querySelectorAll('.cal-mode-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  document.getElementById('calWeekdays').style.display = (mode === 'heat') ? 'none' : '';
+  renderCalendar();
+}
+
+function calNavigate(delta) {
+  if (calMode === 'month') {
+    calendarMonth += delta;
+    if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
+    else if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
+  } else if (calMode === 'week') {
+    calWeekOffset += delta;
+  } else if (calMode === 'heat') {
+    // 热力图一次跳3个月
+    calendarMonth += delta * 3;
+    if (calendarMonth > 11) { calendarMonth -= 12; calendarYear++; }
+    else if (calendarMonth < 0) { calendarMonth += 12; calendarYear--; }
+  }
+  renderCalendar();
+}
+
 function renderCalendar() {
+  if (calMode === 'week') renderWeekView();
+  else if (calMode === 'heat') renderHeatmap();
+  else renderMonthView();
+}
+
+// ====== 月视图 ======
+function renderMonthView() {
   const grid = document.getElementById('calendarGrid');
   const title = document.getElementById('calendarMonthTitle');
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
+  grid.className = 'calendar-grid';
+  title.textContent = `${calendarYear}年${MONTH_NAMES[calendarMonth]}`;
 
-  // 更新标题
-  const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-  title.textContent = `${calendarYear}年${monthNames[calendarMonth]}`;
-
-  // 当月第一天和最后一天
   const firstDay = new Date(calendarYear, calendarMonth, 1);
   const lastDay = new Date(calendarYear, calendarMonth + 1, 0);
   const totalDays = lastDay.getDate();
-
-  // 第一天是星期几（0=周日, 1=周一...6=周六）
   let startDow = firstDay.getDay();
-  startDow = startDow === 0 ? 6 : startDow - 1; // 转为周一起始
-
-  const endDate = new Date(2026, 11, 31); // 考研年份结束
+  startDow = startDow === 0 ? 6 : startDow - 1;
 
   let html = '';
   let studiedCount = 0;
-  let totalMonthDays = 0;
+  for (let i = 0; i < startDow; i++) html += '<div class="calendar-day other-month"></div>';
 
-  // 填充前置空白
-  for (let i = 0; i < startDow; i++) {
-    html += '<div class="calendar-day other-month"></div>';
-  }
-
-  // 里程碑：距考研还有X天的关键节点
-  const MILESTONES = [200, 100, 50, 30, 10, 7, 3, 1];
-
-  // 填充当月日期
   for (let d = 1; d <= totalDays; d++) {
     const date = new Date(calendarYear, calendarMonth, d);
     const dateStr = date.toISOString().split('T')[0];
     const isToday = dateStr === todayStr;
     const isFuture = date > today;
-    const isPast = date < today || isToday;
-    const minutes = isPast ? getDailyMinutes(dateStr) : 0;
+    const minutes = getDailyMinutes(dateStr);
     const studied = minutes > 0;
+    if (studied) studiedCount++;
 
-    // 计算该天距考研还有多少天
-    const daysUntilExam = Math.ceil((EXAM_DATE.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    const daysUntilExam = Math.ceil((EXAM_DATE.getTime() - date.getTime()) / 86400000);
     const isMilestone = MILESTONES.includes(daysUntilExam);
     const isExamDay = daysUntilExam === 0;
 
-    if (studied) studiedCount++;
-    if (isPast) totalMonthDays++;
-
     let cls = 'calendar-day';
-    let tooltip = `${calendarYear}/${calendarMonth + 1}/${d}`;
+    let tip = `${calendarYear}/${calendarMonth+1}/${d}`;
+    if (isExamDay) { cls += ' exam-day'; tip += ' · 🎯 考研日！'; }
+    else if (isMilestone) { cls += ' milestone'; tip += ` · 🎯 距考研${daysUntilExam}天`; }
+    if (studied) { cls += ' studied'; tip += ` · ${minutes}分钟`; }
+    else if (isToday) { cls += ' today'; tip += ' · 今天'; }
+    else if (isFuture) { cls += ' future'; }
+    if (!studied && !isToday && !isFuture) tip += ' · 未打卡';
 
-    if (isExamDay) {
-      cls += ' exam-day';
-      tooltip += ' · 🎯 考研日！';
-    } else if (isMilestone) {
-      cls += ' milestone';
-      tooltip += ` · 🎯 距考研仅剩${daysUntilExam}天！`;
-    }
-
-    if (studied) {
-      cls += ' studied';
-      tooltip += ` · 学习${minutes}分钟`;
-    } else if (isToday) {
-      cls += ' today';
-      tooltip += ' · 今天';
-    } else if (isFuture) {
-      cls += ' future';
-    }
-
-    if (!studied && !isToday && !isFuture) {
-      tooltip += ' · 未打卡';
-    }
-
-    // 里程碑标记
     const marker = isMilestone ? `<span class="milestone-badge">${daysUntilExam}</span>` : '';
     const examMarker = isExamDay ? '<span class="exam-badge">🎯</span>' : '';
+    html += `<div class="${cls}" title="${tip}">${d}${marker}${examMarker}</div>`;
+  }
+  grid.innerHTML = html;
 
-    html += `<div class="${cls}" title="${tooltip}">${d}${marker}${examMarker}</div>`;
-    totalMonthDays++;
+  const monthTotal = data.logs.filter(l => {
+    const d = new Date(l.date);
+    return d.getFullYear() === calendarYear && d.getMonth() === calendarMonth;
+  }).reduce((s, l) => s + l.minutes, 0);
+  document.getElementById('calendarStats').textContent = `本月 ${studiedCount}天 · ${Math.floor(monthTotal/60)}h${monthTotal%60}m`;
+  document.getElementById('calendarLegend').innerHTML = '<span><span class="legend-dot studied"></span> 已学习</span><span><span class="legend-dot today-dot"></span> 今天</span><span><span class="legend-dot future"></span> 待打卡</span>';
+}
+
+// ====== 周视图 ======
+function renderWeekView() {
+  const grid = document.getElementById('calendarGrid');
+  const title = document.getElementById('calendarMonthTitle');
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  grid.className = 'calendar-grid';
+
+  // 计算本周一
+  const dow = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1) + calWeekOffset * 7);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  title.textContent = `${monday.getMonth()+1}/${monday.getDate()} - ${sunday.getMonth()+1}/${sunday.getDate()} ${sunday.getFullYear()}`;
+
+  const dayNames = ['一','二','三','四','五','六','日'];
+  let html = '';
+  let weekTotal = 0;
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const dateStr = d.toISOString().split('T')[0];
+    const isToday = dateStr === todayStr;
+    const minutes = getDailyMinutes(dateStr);
+    weekTotal += minutes;
+
+    let cls = 'calendar-day';
+    if (minutes > 0) cls += ' studied';
+    if (isToday) cls += ' today';
+    if (d > today) cls += ' future';
+
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    const timeStr = minutes > 0 ? (h > 0 ? `${h}h${m}m` : `${m}m`) : '';
+    html += `<div class="${cls}" title="${dateStr}${minutes > 0 ? ' · ' + timeStr : ''}">
+      <span style="font-size:0.62rem;color:var(--text-light);">${dayNames[i]}</span>
+      <span>${d.getDate()}</span>
+      ${timeStr ? `<span class="day-minutes">${timeStr}</span>` : ''}
+    </div>`;
+  }
+  grid.innerHTML = html;
+  document.getElementById('calendarStats').textContent = `本周共 ${Math.floor(weekTotal/60)}h${weekTotal%60}m`;
+  document.getElementById('calendarLegend').innerHTML = '<span><span class="legend-dot studied"></span> 已学习</span><span><span class="legend-dot today-dot"></span> 今天</span>';
+}
+
+// ====== 热力图 ======
+function renderHeatmap() {
+  const grid = document.getElementById('calendarGrid');
+  const title = document.getElementById('calendarMonthTitle');
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  grid.className = 'calendar-grid heatmap';
+
+  // 显示6个月
+  const startDate = new Date(calendarYear, calendarMonth, 1);
+  const endDate = new Date(calendarYear, calendarMonth + 6, 0);
+  title.textContent = `${MONTH_NAMES[startDate.getMonth()]} - ${MONTH_NAMES[endDate.getMonth()]} ${endDate.getFullYear()}`;
+
+  // 计算起始周一
+  let sd = new Date(startDate);
+  const sdDow = sd.getDay();
+  sd.setDate(sd.getDate() - (sdDow === 0 ? 6 : sdDow - 1));
+
+  let html = '';
+  // 星期头
+  const dayLabels = ['一','二','三','四','五','六','日'];
+  html += '<div class="calendar-day" style="background:transparent;font-size:0.5rem;color:var(--text-light);aspect-ratio:1;"></div>';
+  dayLabels.forEach(l => html += `<div class="calendar-day" style="background:transparent;font-size:0.5rem;color:var(--text-light);aspect-ratio:1;">${l}</div>`);
+
+  // 按周排列
+  const totalDays = Math.ceil((endDate.getTime() - sd.getTime()) / 86400000) + 7;
+  const weeks = Math.ceil(totalDays / 7);
+  let dayCount = 0;
+
+  for (let w = 0; w < weeks; w++) {
+    for (let dow = 0; dow < 7; dow++) {
+      const d = new Date(sd);
+      d.setDate(sd.getDate() + w * 7 + dow);
+      const dateStr = d.toISOString().split('T')[0];
+
+      if (d < startDate || d > endDate) {
+        html += '<div class="calendar-day" style="background:transparent;"></div>';
+        continue;
+      }
+
+      const minutes = getDailyMinutes(dateStr);
+      const isToday = dateStr === todayStr;
+      const hc = heatColor(minutes);
+      let cls = `calendar-day heat-cell ${hc}`;
+      if (isToday) cls += ' today';
+      const tip = `${dateStr} · ${minutes}分钟`;
+      html += `<div class="${cls}" title="${tip}"></div>`;
+      dayCount++;
+    }
   }
 
   grid.innerHTML = html;
 
-  // 统计
-  const statsEl = document.getElementById('calendarStats');
-  const monthTotal = data.logs
-    .filter(l => {
-      const d = new Date(l.date);
-      return d.getFullYear() === calendarYear && d.getMonth() === calendarMonth;
-    })
-    .reduce((sum, l) => sum + l.minutes, 0);
-  const hours = Math.floor(monthTotal / 60);
-  const mins = monthTotal % 60;
-  statsEl.textContent = `本月学习 ${studiedCount} 天 · 共 ${hours}h${mins}m`;
-
-  // 总计数
-  const totalDaysStudied = new Set(data.logs.map(l => l.date)).size;
-  const el = document.getElementById('calendarTotal');
-  if (el) el.textContent = `累计 ${totalDaysStudied} 天 · 目标🎯考研上岸`;
-}
-
-function navigateMonth(delta) {
-  calendarMonth += delta;
-  if (calendarMonth > 11) {
-    calendarMonth = 0;
-    calendarYear++;
-  } else if (calendarMonth < 0) {
-    calendarMonth = 11;
-    calendarYear--;
+  const totalMin = data.logs.filter(l => l.date >= startDate.toISOString().split('T')[0] && l.date <= endDate.toISOString().split('T')[0]).reduce((s, l) => s + l.minutes, 0);
+  document.getElementById('calendarStats').textContent = `共 ${Math.floor(totalMin/60)}h${totalMin%60}m`;
+  // 热力图例
+  let legendHtml = '<span style="font-size:0.6rem;color:var(--text-light);">少</span> ';
+  for (let i = 0; i <= 6; i++) {
+    legendHtml += `<span class="legend-dot" style="background:${['#f1f5f9','#dbeafe','#93c5fd','#86efac','#fde68a','#fdba74','#f87171'][i]};width:10px;height:10px;border-radius:2px;display:inline-block;"></span>`;
   }
-  renderCalendar();
+  legendHtml += ' <span style="font-size:0.6rem;color:var(--text-light);">多</span>';
+  legendHtml += ' <span style="font-size:0.55rem;color:var(--text-light);margin-left:8px;">蓝=少 &rarr; 绿 &rarr; 黄 &rarr; 红=多</span>';
+  document.getElementById('calendarLegend').innerHTML = legendHtml;
 }
 
 function renderAchievements() {
@@ -1921,6 +2079,8 @@ let timerState = {
 // 日历状态
 let calendarMonth = new Date().getMonth(); // 0-11
 let calendarYear = new Date().getFullYear();
+let calMode = 'month'; // month | week | heat
+let calWeekOffset = 0; // 周视图偏移：0=本周，负数=过去，正数=未来
 
 function updateTimerDisplay() {
   const mins = Math.floor(timerState.secondsLeft / 60);
