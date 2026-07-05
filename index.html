@@ -841,14 +841,35 @@ body::before {
 
 /* ========== 语录 ========== */
 .quote-card {
-  text-align: center;
-  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 12px;
   background: linear-gradient(135deg, rgba(99,102,241,0.05), rgba(244,114,182,0.05));
   border-radius: var(--radius-sm);
   border-left: 4px solid var(--primary);
+  text-align: center;
 }
-.quote-text { font-style: italic; font-size: 1rem; line-height: 1.7; }
-.quote-author { color: var(--text-light); font-size: 0.8rem; margin-top: 8px; }
+.quote-nav {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(99,102,241,0.08);
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.quote-nav:hover {
+  background: var(--primary);
+  color: white;
+}
+.quote-text { font-style: italic; font-size: 0.95rem; line-height: 1.7; }
+.quote-author { color: var(--text-light); font-size: 0.78rem; margin-top: 6px; }
 
 /* ========== 五彩纸屑 ========== */
 .confetti-container {
@@ -1060,8 +1081,12 @@ body::before {
     <!-- 励志语录 -->
     <div class="card">
       <div class="quote-card">
-        <div class="quote-text" id="quoteText">"每一个优秀的人，都有一段沉默的时光。"</div>
-        <div class="quote-author" id="quoteAuthor">—— 励志语录</div>
+        <button class="quote-nav" onclick="prevQuote()" title="上一条">◀</button>
+        <div style="flex:1;">
+          <div class="quote-text" id="quoteText">"每一个优秀的人，都有一段沉默的时光。"</div>
+          <div class="quote-author" id="quoteAuthor">—— 励志语录</div>
+        </div>
+        <button class="quote-nav" onclick="nextQuote()" title="下一条">▶</button>
       </div>
     </div>
 
@@ -1522,10 +1547,21 @@ const QUOTES = [
   { text: '不要因为走得太远而忘记为什么出发。', author: '—— 克尔凯郭尔' },
 ];
 
-function randomQuote() {
-  const q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+let quoteIndex = Math.floor(Math.random() * QUOTES.length);
+
+function showQuote(index) {
+  quoteIndex = ((index % QUOTES.length) + QUOTES.length) % QUOTES.length;
+  const q = QUOTES[quoteIndex];
   document.getElementById('quoteText').textContent = `"${q.text}"`;
   document.getElementById('quoteAuthor').textContent = q.author;
+}
+
+function nextQuote() { showQuote(quoteIndex + 1); }
+function prevQuote() { showQuote(quoteIndex - 1); }
+function randomQuote() {
+  let next;
+  do { next = Math.floor(Math.random() * QUOTES.length); } while (next === quoteIndex && QUOTES.length > 1);
+  showQuote(next);
 }
 
 // ==================== 五彩纸屑 ====================
