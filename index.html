@@ -1109,8 +1109,8 @@ body::before {
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px;">
         <div style="display:flex;gap:4px;">
           <button class="cal-mode-btn active" data-mode="month" onclick="switchCalMode('month')">📅 月</button>
-          <button class="cal-mode-btn" data-mode="week" onclick="switchCalMode('week')">📆 周</button>
           <button class="cal-mode-btn" data-mode="heat" onclick="switchCalMode('heat')">🌡️ 热力</button>
+          <button class="cal-mode-btn" data-mode="chart" onclick="switchCalMode('chart')">📊 图表</button>
         </div>
         <div class="calendar-nav" id="calNav">
           <button class="calendar-nav-btn" onclick="calNavigate(-1)">◀</button>
@@ -1770,29 +1770,29 @@ function switchCalMode(mode) {
   document.querySelectorAll('.cal-mode-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.mode === mode);
   });
-  document.getElementById('calWeekdays').style.display = (mode === 'heat') ? 'none' : '';
+  const nav = document.getElementById('calNav');
+  const wd = document.getElementById('calWeekdays');
+  if (mode === 'chart') { nav.style.display = 'none'; wd.style.display = 'none'; }
+  else { nav.style.display = ''; wd.style.display = (mode === 'heat') ? 'none' : ''; }
   renderCalendar();
 }
 
 function calNavigate(delta) {
-  if (calMode === 'month') {
-    calendarMonth += delta;
-    if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
-    else if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
-  } else if (calMode === 'week') {
-    calWeekOffset += delta;
-  } else if (calMode === 'heat') {
-    // 热力图一次跳3个月
+  if (calMode === 'heat') {
     calendarMonth += delta * 3;
     if (calendarMonth > 11) { calendarMonth -= 12; calendarYear++; }
     else if (calendarMonth < 0) { calendarMonth += 12; calendarYear--; }
+  } else {
+    calendarMonth += delta;
+    if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
+    else if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
   }
   renderCalendar();
 }
 
 function renderCalendar() {
-  if (calMode === 'week') renderWeekView();
-  else if (calMode === 'heat') renderHeatmap();
+  if (calMode === 'heat') renderHeatmap();
+  else if (calMode === 'chart') renderCharts();
   else renderMonthView();
 }
 
@@ -1839,7 +1839,8 @@ function renderMonthView() {
 
     const marker = isMilestone ? `<span class="milestone-badge">${daysUntilExam}</span>` : '';
     const examMarker = isExamDay ? '<span class="exam-badge">🎯</span>' : '';
-    html += `<div class="${cls}" title="${tip}">${d}${marker}${examMarker}</div>`;
+    const timeLabel = minutes > 0 ? `<span class="day-minutes">${Math.floor(minutes/60)>0?Math.floor(minutes/60)+'h':''}${minutes%60>0?minutes%60+'m':''}</span>` : '';
+    html += `<div class="${cls}" title="${tip}">${d}${marker}${examMarker}${timeLabel}</div>`;
   }
   grid.innerHTML = html;
 
@@ -1852,53 +1853,100 @@ function renderMonthView() {
 }
 
 // ====== 周视图 ======
-function renderWeekView() {
+// ====== 图表视图 ======
+function renderCharts() {
   const grid = document.getElementById('calendarGrid');
   const title = document.getElementById('calendarMonthTitle');
+  const legend = document.getElementById('calendarLegend');
+  const stats = document.getElementById('calendarStats');
+  grid.className = '';
+  title.textContent = '📊 学习数据可视化';
+  stats.textContent = '';
+
+  // 科目分布数据
+  const subjectMap = {};
+  data.logs.forEach(l => {
+    const s = l.subject || '其他';
+    subjectMap[s] = (subjectMap[s] || 0) + l.minutes;
+  });
+  const subjects = Object.entries(subjectMap).sort((a, b) => b[1] - a[1]);
+  const totalMin = subjects.reduce((s, [, m]) => s + m, 0);
+
+  // 本月每日数据
   const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  grid.className = 'calendar-grid';
-
-  // 计算本周一
-  const dow = today.getDay();
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1) + calWeekOffset * 7);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-
-  title.textContent = `${monday.getMonth()+1}/${monday.getDate()} - ${sunday.getMonth()+1}/${sunday.getDate()} ${sunday.getFullYear()}`;
-
-  const dayNames = ['一','二','三','四','五','六','日'];
-  let html = '';
-  let weekTotal = 0;
-
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    const dateStr = d.toISOString().split('T')[0];
-    const isToday = dateStr === todayStr;
-    const minutes = getDailyMinutes(dateStr);
-    weekTotal += minutes;
-
-    let cls = 'calendar-day';
-    if (minutes > 0) cls += ' studied';
-    if (isToday) cls += ' today';
-    if (d > today) cls += ' future';
-
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    const timeStr = minutes > 0 ? (h > 0 ? `${h}h${m}m` : `${m}m`) : '';
-    html += `<div class="${cls}" title="${dateStr}${minutes > 0 ? ' · ' + timeStr : ''}">
-      <span style="font-size:0.7rem;font-weight:700;">${dayNames[i]}</span>
-      ${timeStr ? `<span class="day-minutes">${timeStr}</span>` : ''}
-    </div>`;
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const dailyData = [];
+  for (let d = 1; d <= new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate(); d++) {
+    const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    dailyData.push({ day: d, min: getDailyMinutes(dateStr) });
   }
-  grid.innerHTML = html;
-  document.getElementById('calendarStats').textContent = `本周共 ${Math.floor(weekTotal/60)}h${weekTotal%60}m`;
-  document.getElementById('calendarLegend').innerHTML = '<span><span class="legend-dot studied"></span> 已学习</span><span><span class="legend-dot today-dot"></span> 今天</span>';
-}
 
-// ====== 热力图 ======
+  const colors = ['#6366f1','#f472b6','#34d399','#fbbf24','#818cf8','#fb923c','#a78bfa','#6ee7b7'];
+
+  let html = '<div style="display:flex;gap:16px;flex-wrap:wrap;">';
+
+  // ===== 饼图（科目分布） =====
+  html += '<div style="flex:1;min-width:240px;background:white;border-radius:12px;padding:16px;text-align:center;">';
+  html += '<div style="font-weight:700;font-size:0.85rem;margin-bottom:10px;">📊 科目分布</div>';
+  if (totalMin === 0) {
+    html += '<div style="padding:40px;color:var(--text-light);">暂无学习数据</div>';
+  } else {
+    // SVG 饼图
+    const cx = 90, cy = 90, r = 70;
+    html += `<svg width="200" height="200" viewBox="0 0 180 180" style="display:block;margin:0 auto;">`;
+    let angle = -Math.PI / 2;
+    subjects.forEach(([name, min], i) => {
+      const slice = (min / totalMin) * Math.PI * 2;
+      const x1 = cx + r * Math.cos(angle);
+      const y1 = cy + r * Math.sin(angle);
+      const x2 = cx + r * Math.cos(angle + slice);
+      const y2 = cy + r * Math.sin(angle + slice);
+      const large = slice > Math.PI ? 1 : 0;
+      html += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z" fill="${colors[i%colors.length]}" stroke="white" stroke-width="1.5"/>`;
+      angle += slice;
+    });
+    html += '</svg>';
+
+    // 图例
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:8px;">';
+    subjects.forEach(([name, min], i) => {
+      const pct = ((min / totalMin) * 100).toFixed(0);
+      html += `<span style="font-size:0.65rem;display:flex;align-items:center;gap:3px;"><span style="width:8px;height:8px;border-radius:2px;background:${colors[i%colors.length]};display:inline-block;"></span>${name} ${pct}%</span>`;
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // ===== 柱状图（本月每日） =====
+  html += '<div style="flex:2;min-width:300px;background:white;border-radius:12px;padding:16px;text-align:center;">';
+  html += `<div style="font-weight:700;font-size:0.85rem;margin-bottom:10px;">📈 本月每日学习（${today.getMonth()+1}月）</div>`;
+  const maxMin = Math.max(1, ...dailyData.map(d => d.min));
+  const barW = Math.max(6, Math.floor(340 / dailyData.length));
+  html += `<svg width="${Math.max(300, dailyData.length * barW + 30)}" height="160" viewBox="0 0 ${dailyData.length * barW + 30} 160" style="display:block;margin:0 auto;">`;
+  // Y轴参考线
+  [25, 50, 75].forEach(pct => {
+    const y = 140 - (pct / 100) * 120;
+    html += `<line x1="0" y1="${y}" x2="${dailyData.length * barW + 30}" y2="${y}" stroke="#f1f5f9" stroke-width="1"/>`;
+    html += `<text x="2" y="${y-2}" font-size="8" fill="#94a3b8">${Math.round(maxMin*pct/100)}m</text>`;
+  });
+  dailyData.forEach((d, i) => {
+    const h = (d.min / maxMin) * 120;
+    const x = i * barW + 5;
+    const y = 140 - h;
+    const isToday = d.day === today.getDate();
+    html += `<rect x="${x}" y="${y}" width="${barW-2}" height="${h}" rx="2" fill="${isToday ? '#6366f1' : '#a5b4fc'}" opacity="${isToday ? 1 : 0.7}"><title>${d.day}日: ${d.min}分钟</title></rect>`;
+  });
+  html += '</svg>';
+  html += '</div>';
+
+  html += '</div>';
+  grid.innerHTML = html;
+
+  // 总结
+  const totalH = Math.floor(totalMin / 60);
+  const totalM = totalMin % 60;
+  legend.innerHTML = `<span style="font-size:0.7rem;color:var(--text-light);">总学习 ${totalH}h${totalM}m · ${subjects.length} 个科目 · ${data.logs.length} 条记录</span>`;
+}
 function renderHeatmap() {
   const grid = document.getElementById('calendarGrid');
   const title = document.getElementById('calendarMonthTitle');
