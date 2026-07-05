@@ -60,24 +60,166 @@ body::before {
   66% { transform: translate(-1%, 1%); }
 }
 
+/* ========== 布局 ========== */
 .container {
-  max-width: 800px;
+  display: flex;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 20px;
-  padding-top: 80px;
+  min-height: 100vh;
   position: relative;
   z-index: 1;
+  gap: 0;
+}
+
+/* ========== 侧边栏 ========== */
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(99,102,241,0.08);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 2px 0 24px rgba(99,102,241,0.06);
+}
+
+.sidebar-section {
+  background: rgba(99,102,241,0.04);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+
+/* 侧边栏倒计时 */
+.sidebar-countdown {
+  text-align: center;
+}
+.sidebar-countdown .countdown-num {
+  font-size: 1.8rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #6366f1, #f472b6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.sidebar-countdown .countdown-label {
+  font-size: 0.7rem;
+  color: var(--text-light);
+}
+
+/* 侧边栏统计 */
+.sidebar-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.sidebar-stat {
+  text-align: center;
+  padding: 6px 4px;
+}
+.sidebar-stat .s-val { font-size: 1rem; font-weight: 800; }
+.sidebar-stat .s-lbl { font-size: 0.62rem; color: var(--text-light); }
+
+/* 侧边栏等级 */
+.sidebar-level {
+  text-align: center;
+}
+.sidebar-level .level-icon {
+  font-size: 2rem;
+  display: block;
+}
+.sidebar-level .level-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin: 2px 0;
+}
+
+/* 侧边栏导航 */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+.sidebar-nav .nav-tab {
+  flex: none;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-light);
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: inherit;
+  text-align: left;
+}
+.sidebar-nav .nav-tab .tab-icon { font-size: 1.2rem; }
+.sidebar-nav .nav-tab.active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+}
+.sidebar-nav .nav-tab:hover:not(.active) {
+  background: rgba(99,102,241,0.08);
+  color: var(--primary);
+}
+
+/* 侧边栏底部名片 */
+.sidebar-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(0,0,0,0.03);
+}
+.sidebar-footer img {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.sidebar-footer .sf-info {
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+.sidebar-footer .sf-info a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+/* ========== 主内容区 ========== */
+.main-content {
+  flex: 1;
+  margin-left: 220px;
+  padding: 20px 24px;
+  min-height: 100vh;
 }
 
 /* ========== 头部 ========== */
 .header {
-  text-align: center;
-  padding: 30px 20px 20px;
+  text-align: left;
+  padding: 0 0 16px;
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 .header .logo {
-  font-size: 3rem;
-  display: block;
+  font-size: 2.2rem;
+  line-height: 1;
   animation: bounce 2s ease-in-out infinite;
 }
 @keyframes bounce {
@@ -85,64 +227,20 @@ body::before {
   50% { transform: translateY(-12px); }
 }
 .header h1 {
-  font-size: 2rem;
+  font-size: 1.4rem;
   font-weight: 800;
   background: linear-gradient(135deg, var(--primary), var(--accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  margin: 8px 0 4px;
 }
 .header .subtitle {
   color: var(--text-light);
-  font-size: 0.95rem;
+  font-size: 0.8rem;
 }
 
-/* ========== 导航标签 ========== */
-.nav-tabs {
-  display: flex;
-  gap: 8px;
-  background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 0 0 var(--radius) var(--radius);
-  padding: 10px 6px 6px;
-  box-shadow: 0 4px 24px rgba(99,102,241,0.12);
-  margin-bottom: 20px;
-  position: fixed;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 800px;
-  z-index: 1000;
-}
-.nav-tab {
-  flex: 1;
-  padding: 12px 8px;
-  border: none;
-  background: transparent;
-  border-radius: 16px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-light);
-  transition: var(--transition);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-.nav-tab .tab-icon { font-size: 1.4rem; }
-.nav-tab.active {
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
-  color: white;
-  box-shadow: 0 4px 16px rgba(99,102,241,0.3);
-}
-.nav-tab:hover:not(.active) {
-  background: rgba(99,102,241,0.08);
-  color: var(--primary);
-}
+/* 旧的导航条标签不再需要 */
+.nav-tabs { display: none; }
 
 /* ========== 卡片 ========== */
 .card {
@@ -528,10 +626,46 @@ body::before {
 }
 .profile-qq:hover { color: var(--accent); }
 
-/* 响应式日历 */
+/* 响应式 */
+@media (max-width: 800px) {
+  .container { flex-direction: column; }
+  .sidebar {
+    position: relative;
+    transform: none;
+    left: auto;
+    width: 100%;
+    min-width: auto;
+    height: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+    border-right: none;
+    border-bottom: 1px solid rgba(99,102,241,0.08);
+    overflow-y: visible;
+  }
+  .sidebar-section { flex: 0 0 auto; padding: 8px 10px; }
+  .sidebar-countdown { display: flex; align-items: center; gap: 6px; }
+  .sidebar-countdown .countdown-num { font-size: 1.3rem; }
+  .sidebar-stats { display: flex; gap: 8px; }
+  .sidebar-stat { padding: 0; }
+  .sidebar-nav { flex-direction: row; gap: 4px; flex: none; }
+  .sidebar-nav .nav-tab { padding: 6px 10px; font-size: 0.7rem; gap: 4px; }
+  .sidebar-nav .nav-tab .tab-icon { font-size: 0.9rem; }
+  .sidebar-level .level-icon { font-size: 1.3rem; }
+  .sidebar-footer { display: none; }
+  .xp-bar { max-width: 100px; }
+
+  .main-content { margin-left: 0; padding: 12px; }
+  .header h1 { font-size: 1.1rem; }
+  .header .logo { font-size: 1.6rem; }
+  .calendar-day { font-size: 0.6rem; border-radius: 3px; }
+  .calendar-grid { gap: 1px; }
+}
+
 @media (max-width: 600px) {
-  .calendar-day { font-size: 0.65rem; border-radius: 4px; }
-  .calendar-grid { gap: 2px; }
+  .calendar-day { font-size: 0.55rem; border-radius: 3px; }
+  .calendar-grid { gap: 1px; }
 }
 
 /* ========== 目标 ========== */
@@ -912,78 +1046,95 @@ body::before {
 <body>
 
 <div class="container">
-  <!-- 头部 -->
-  <header class="header">
-    <span class="logo">🐱</span>
-    <h1>考研加油站</h1>
-    <p class="subtitle" id="greeting">加油，今天的努力是明天的底气！</p>
-  </header>
+  <!-- ========== 侧边栏 ========== -->
+  <aside class="sidebar">
+    <!-- 倒计时 -->
+    <div class="sidebar-section sidebar-countdown">
+      <div class="countdown-num" id="countdownDays">168</div>
+      <div class="countdown-label">天 · 距2026.12.19考研</div>
+    </div>
 
-  <!-- 导航 -->
-  <nav class="nav-tabs">
-    <button class="nav-tab active" data-panel="dashboard">
-      <span class="tab-icon">🏠</span> 仪表盘
-    </button>
-    <button class="nav-tab" data-panel="pomodoro">
-      <span class="tab-icon">🍅</span> 番茄钟
-    </button>
-    <button class="nav-tab" data-panel="goals">
-      <span class="tab-icon">🎯</span> 目标
-    </button>
-    <button class="nav-tab" data-panel="log">
-      <span class="tab-icon">📝</span> 记录
-    </button>
-    <button class="nav-tab" data-panel="achievements">
-      <span class="tab-icon">🏆</span> 成就
-    </button>
-  </nav>
-
-  <!-- ==================== 仪表盘面板 ==================== -->
-  <section class="panel active" id="panel-dashboard">
-    <!-- 考研倒计时 -->
-    <div class="card countdown-card">
-      <div style="text-align:center;">
-        <div style="font-size:0.85rem;color:var(--text-light);margin-bottom:4px;">🎯 距离2026年12月19日考研</div>
-        <div style="font-size:3rem;font-weight:900;background:linear-gradient(135deg,#6366f1,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" id="countdownDays">168</div>
-        <div style="font-size:1rem;color:var(--primary);font-weight:700;">天</div>
+    <!-- 统计 -->
+    <div class="sidebar-section">
+      <div class="sidebar-stats">
+        <div class="sidebar-stat">
+          <div class="s-val" id="streakCount">0</div>
+          <div class="s-lbl">🔥 连续打卡</div>
+        </div>
+        <div class="sidebar-stat">
+          <div class="s-val" id="todayMinutes">0</div>
+          <div class="s-lbl">⏱️ 今日(分)</div>
+        </div>
+        <div class="sidebar-stat">
+          <div class="s-val" id="todayPomodoros">0</div>
+          <div class="s-lbl">🍅 今日番茄</div>
+        </div>
+        <div class="sidebar-stat">
+          <div class="s-val" id="totalHours">0</div>
+          <div class="s-lbl">📚 总(小时)</div>
+        </div>
       </div>
     </div>
 
     <!-- 等级 -->
-    <div class="card">
-      <div class="level-display">
-        <div class="level-badge" id="levelBadge">1</div>
-        <div class="level-title" id="levelTitle">🥚 考研萌新</div>
-        <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
-        <div class="level-xp" id="xpText">0 / 10 小时升级</div>
-      </div>
+    <div class="sidebar-section sidebar-level">
+      <span class="level-icon" id="levelBadge">🥚</span>
+      <div class="level-name" id="levelTitle">考研萌新</div>
+      <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+      <div style="font-size:0.6rem;color:var(--text-light);margin-top:2px;" id="xpText">0/10h</div>
     </div>
 
-    <!-- 统计 -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <span class="stat-icon">🔥</span>
-        <div class="stat-value" id="streakCount">0</div>
-        <div class="stat-label">连续打卡天数</div>
-      </div>
-      <div class="stat-card">
-        <span class="stat-icon">⏱️</span>
-        <div class="stat-value" id="todayMinutes">0</div>
-        <div class="stat-label">今日学习(分钟)</div>
-      </div>
-      <div class="stat-card">
-        <span class="stat-icon">🍅</span>
-        <div class="stat-value" id="todayPomodoros">0</div>
-        <div class="stat-label">今日番茄数</div>
-      </div>
-      <div class="stat-card">
-        <span class="stat-icon">📚</span>
-        <div class="stat-value" id="totalHours">0</div>
-        <div class="stat-label">总学习(小时)</div>
+    <!-- 导航 -->
+    <nav class="sidebar-nav">
+      <button class="nav-tab active" data-panel="dashboard">
+        <span class="tab-icon">🏠</span> 仪表盘
+      </button>
+      <button class="nav-tab" data-panel="pomodoro">
+        <span class="tab-icon">🍅</span> 番茄钟
+      </button>
+      <button class="nav-tab" data-panel="goals">
+        <span class="tab-icon">🎯</span> 目标
+      </button>
+      <button class="nav-tab" data-panel="log">
+        <span class="tab-icon">📝</span> 记录
+      </button>
+      <button class="nav-tab" data-panel="achievements">
+        <span class="tab-icon">🏆</span> 成就
+      </button>
+    </nav>
+
+    <!-- 底部名片 -->
+    <div class="sidebar-footer">
+      <img src="https://github.com/xuyiming1216-cpu.png" alt="avatar" onerror="this.style.display='none'">
+      <div class="sf-info">
+        <a href="https://github.com/xuyiming1216-cpu/study-planner" target="_blank">🔗 GitHub</a><br>
+        <span style="cursor:pointer;color:var(--text-light);" onclick="navigator.clipboard.writeText('1141174880');showToast('📋 QQ已复制: 1141174880')" title="点击复制QQ">🐧 QQ</span>
       </div>
     </div>
+  </aside>
 
-    <!-- 学习日历 -->
+  <!-- ========== 主内容 ========== -->
+  <main class="main-content">
+    <!-- 头部 -->
+    <header class="header">
+      <span class="logo">🐱</span>
+      <div>
+        <h1>考研加油站</h1>
+        <p class="subtitle" id="greeting">加油，今天的努力是明天的底气！</p>
+      </div>
+    </header>
+
+    <!-- ==================== 仪表盘面板 ==================== -->
+    <section class="panel active" id="panel-dashboard">
+      <!-- 励志语录 -->
+      <div class="card">
+        <div class="quote-card">
+          <div class="quote-text" id="quoteText">"每一个优秀的人，都有一段沉默的时光。"</div>
+          <div class="quote-author" id="quoteAuthor">—— 励志语录</div>
+        </div>
+      </div>
+
+      <!-- 学习日历 -->
     <div class="card">
       <div class="card-header">
         <span class="icon">📅</span>
@@ -1133,21 +1284,8 @@ body::before {
       <div id="achievementsList"></div>
     </div>
   </section>
-  <!-- 个人名片 -->
-  <div class="profile-card" id="profileCard">
-    <div class="profile-trigger" id="profileTrigger">
-      <img src="https://github.com/xuyiming1216-cpu.png" alt="avatar" class="profile-avatar" onerror="this.style.display='none'">
-    </div>
-    <div class="profile-popup" id="profilePopup">
-      <img src="https://github.com/xuyiming1216-cpu.png" alt="avatar" class="profile-avatar-lg" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐱</text></svg>'">
-      <div class="profile-name">xuyiming1216-cpu</div>
-      <a href="https://github.com/xuyiming1216-cpu/study-planner" target="_blank" class="profile-link">🔗 GitHub 仓库</a>
-      <div class="profile-qq" onclick="navigator.clipboard.writeText('1141174880');showToast('📋 QQ号已复制：1141174880')" title="点击复制QQ号">
-        <span>🐧 QQ：1141174880</span>
-        <span style="font-size:0.6rem;color:var(--text-light);">（点击复制）</span>
-      </div>
-    </div>
-  </div>
+  </section>
+</main>
 </div>
 
 <!-- 五彩纸屑容器 -->
@@ -1504,16 +1642,18 @@ function refreshDashboard() {
   const level = getLevel(totalHours);
   const nextLevel = getNextLevel(totalHours);
 
-  // 等级
-  document.getElementById('levelBadge').textContent = level.icon;
-  document.getElementById('levelTitle').textContent = level.title;
+  // 等级（侧边栏）
+  const levelIcon = level.icon;
+  const levelName = level.title.replace(/^[^\s]+\s/, ''); // 去掉emoji前缀
+  document.getElementById('levelBadge').textContent = levelIcon;
+  document.getElementById('levelTitle').textContent = levelName;
   const xpPercent = nextLevel
     ? Math.min(100, ((totalHours - level.min) / (nextLevel.min - level.min)) * 100)
     : 100;
   document.getElementById('xpFill').style.width = xpPercent + '%';
   document.getElementById('xpText').textContent = nextLevel
-    ? `${totalHours.toFixed(1)} / ${nextLevel.min} 小时升级`
-    : `${totalHours.toFixed(1)} 小时（满级！）`;
+    ? `${totalHours.toFixed(1)}/${nextLevel.min}h`
+    : `${totalHours.toFixed(1)}h 满级`;
 
   // 统计
   document.getElementById('streakCount').textContent = data.streak || 0;
@@ -2374,19 +2514,6 @@ function init() {
   if (lastExport) {
     const el = document.getElementById('lastSavedTime');
     if (el) el.textContent = `上次备份：${new Date(parseInt(lastExport)).toLocaleString('zh-CN')}`;
-  }
-
-  // 个人名片点击（手机端也支持）
-  const profileTrigger = document.getElementById('profileTrigger');
-  const profilePopup = document.getElementById('profilePopup');
-  if (profileTrigger && profilePopup) {
-    profileTrigger.addEventListener('click', (e) => {
-      e.stopPropagation();
-      profilePopup.style.display = profilePopup.style.display === 'block' ? 'none' : 'block';
-    });
-    document.addEventListener('click', () => {
-      profilePopup.style.display = 'none';
-    });
   }
 
   // 吉祥物点击追踪（隐藏成就）
