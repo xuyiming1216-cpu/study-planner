@@ -490,7 +490,7 @@ body::before {
 .floating-widget.countdown-widget .fw-val { font-size: 0.85rem; background: linear-gradient(135deg, #6366f1, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
 /* 小屏幕隐藏浮动侧边栏 */
-@media (max-width: 1100px) {
+@media (max-width: 960px) {
   .floating-sidebar { display: none; }
 }
 
@@ -1250,6 +1250,7 @@ let data = loadData();
 // 检查日期变更
 function checkDateChange() {
   const today = new Date().toISOString().split('T')[0];
+  const todayDate = new Date();
   if (data.todayDate !== today) {
     // 检查昨天是否学习了
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
@@ -1262,6 +1263,26 @@ function checkDateChange() {
     data.todayDate = today;
     data.todayMinutes = 0;
     data.todayPomodoros = 0;
+
+    // 重置每日目标
+    data.goals.forEach(g => {
+      if (g.type === 'daily') g.current = 0;
+    });
+
+    // 重置每周目标（周一重置）
+    if (todayDate.getDay() === 1) {
+      data.goals.forEach(g => {
+        if (g.type === 'weekly') g.current = 0;
+      });
+    }
+
+    // 重置每月目标（1号重置）
+    if (todayDate.getDate() === 1) {
+      data.goals.forEach(g => {
+        if (g.type === 'monthly') g.current = 0;
+      });
+    }
+
     saveData(data);
   }
   updateWeeklyCheckins();
