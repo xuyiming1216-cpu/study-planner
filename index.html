@@ -307,17 +307,11 @@ body::before {
 }
 
 /* 番茄动画 */
-.tomato-animation {
-  font-size: 3rem;
-  animation: tomatoPulse 2s ease-in-out infinite;
-  display: inline-block;
+.tomato-icon {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 8px;
 }
-@keyframes tomatoPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.15); }
-}
-.tomato-animation.working { animation-duration: 0.8s; }
-.tomato-animation.resting { animation-duration: 1.5s; filter: hue-rotate(120deg); }
 
 /* ========== 仪表盘 ========== */
 .stats-grid {
@@ -1090,7 +1084,7 @@ body::before {
   <!-- ==================== 番茄钟面板 ==================== -->
   <section class="panel" id="panel-pomodoro">
     <div class="card pomodoro-container">
-      <div class="tomato-animation" id="tomatoIcon">🍅</div>
+      <div class="tomato-icon" id="tomatoIcon">🍅</div>
 
       <div class="timer-circle">
         <svg viewBox="0 0 220 220">
@@ -1906,10 +1900,10 @@ function updateTimerDisplay() {
   document.getElementById('timerLabel').textContent = timerState.isWork ? '🍅 专注时间' : '☕ 休息时间';
   document.getElementById('sessionCount').textContent = `第 ${timerState.sessionNumber} 个番茄`;
 
+  // 番茄图标：工作🍅 休息☕
   const tomatoIcon = document.getElementById('tomatoIcon');
-  tomatoIcon.className = 'tomato-animation';
-  if (timerState.isRunning) {
-    tomatoIcon.classList.add(timerState.isWork ? 'working' : 'resting');
+  if (tomatoIcon) {
+    tomatoIcon.textContent = timerState.isWork ? '🍅' : '☕';
   }
 
   const btnStart = document.getElementById('btnStart');
