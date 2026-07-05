@@ -451,6 +451,49 @@ body::before {
   100% { transform: scale(1); }
 }
 
+/* ========== 浮动侧边小组件 ========== */
+.floating-sidebar {
+  position: fixed;
+  top: 50%;
+  left: 16px;
+  transform: translateY(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.floating-widget {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 2px 12px rgba(99,102,241,0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.6);
+}
+.floating-widget:hover {
+  transform: scale(1.12);
+  box-shadow: 0 4px 20px rgba(99,102,241,0.18);
+}
+.floating-widget .fw-icon { font-size: 1.2rem; line-height: 1; }
+.floating-widget .fw-val { font-size: 0.65rem; font-weight: 800; color: var(--text); }
+.floating-widget .fw-lbl { font-size: 0.5rem; color: var(--text-light); }
+.floating-widget.countdown-widget { background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(244,114,182,0.08)); }
+.floating-widget.countdown-widget .fw-val { font-size: 0.85rem; background: linear-gradient(135deg, #6366f1, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+/* 小屏幕隐藏浮动侧边栏 */
+@media (max-width: 1100px) {
+  .floating-sidebar { display: none; }
+}
+
 /* ========== 个人名片 ========== */
 .profile-card {
   position: fixed;
@@ -910,6 +953,26 @@ body::before {
 </style>
 </head>
 <body>
+
+<!-- 浮动侧边栏 -->
+<div class="floating-sidebar">
+  <div class="floating-widget countdown-widget" title="考研倒计时">
+    <span class="fw-val" id="floatCountdown">168</span>
+    <span class="fw-lbl">天</span>
+  </div>
+  <div class="floating-widget" title="连续打卡">
+    <span class="fw-icon">🔥</span>
+    <span class="fw-val" id="floatStreak">0</span>
+  </div>
+  <div class="floating-widget" title="今日学习">
+    <span class="fw-icon">⏱️</span>
+    <span class="fw-val" id="floatToday">0</span>
+  </div>
+  <div class="floating-widget" title="等级">
+    <span class="fw-icon" id="floatLevel">🥚</span>
+    <span class="fw-lbl" id="floatLevelName">萌新</span>
+  </div>
+</div>
 
 <div class="container">
   <!-- 头部 -->
@@ -1543,6 +1606,9 @@ function refreshDashboard() {
 
   // 倒计时
   updateCountdown();
+
+  // 浮动侧边栏
+  updateFloatingSidebar(level);
 }
 
 function updateGreeting() {
@@ -1566,6 +1632,20 @@ function updateCountdown() {
   const diff = EXAM_DATE.getTime() - now.getTime();
   const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
   document.getElementById('countdownDays').textContent = daysLeft > 0 ? daysLeft : '🎉';
+  // 浮动侧边栏倒计时
+  const fc = document.getElementById('floatCountdown');
+  if (fc) fc.textContent = daysLeft > 0 ? daysLeft : '🎉';
+}
+
+function updateFloatingSidebar(level) {
+  const fs = document.getElementById('floatStreak');
+  const ft = document.getElementById('floatToday');
+  const fl = document.getElementById('floatLevel');
+  const fln = document.getElementById('floatLevelName');
+  if (fs) fs.textContent = data.streak || 0;
+  if (ft) ft.textContent = (data.todayMinutes || 0) + 'm';
+  if (fl) fl.textContent = level.icon;
+  if (fln) fln.textContent = level.title.replace(/^[^\s]+\s/, '').slice(0, 2);
 }
 
 // 获取某天的学习分钟数
