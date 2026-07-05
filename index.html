@@ -381,7 +381,7 @@ body::before {
 .calendar-day.heat-cell.heat-4 { background: #fde68a !important; }
 .calendar-day.heat-cell.heat-5 { background: #fdba74 !important; }
 .calendar-day.heat-cell.heat-6 { background: #f87171 !important; }
-.calendar-day.heat-cell.heat-7 { background: #1e1b2e !important; }
+.calendar-day.heat-cell.heat-7 { background: #6b1a2a !important; }
 
 .calendar-nav {
   display: flex;
@@ -2054,7 +2054,7 @@ function renderHeatmap() {
   const totalMin = data.logs.filter(l => l.date >= startDate.toISOString().split('T')[0] && l.date <= endDate.toISOString().split('T')[0]).reduce((s, l) => s + l.minutes, 0);
   document.getElementById('calendarStats').textContent = `共 ${Math.floor(totalMin/60)}h${totalMin%60}m`;
   // 热力图例
-  const heatColors = ['#f1f5f9','#dbeafe','#93c5fd','#86efac','#fde68a','#fdba74','#f87171','#1e1b2e'];
+  const heatColors = ['#f1f5f9','#dbeafe','#93c5fd','#86efac','#fde68a','#fdba74','#f87171','#6b1a2a'];
   const heatLabels = ['0', '<30m', '<1h', '<2h', '<3h', '<5h', '<8h', '8h+'];
   let legendHtml = '<div style="display:flex;align-items:center;gap:3px;flex-wrap:wrap;justify-content:center;font-size:0.6rem;color:var(--text-light);">';
   for (let i = 0; i <= 7; i++) {
