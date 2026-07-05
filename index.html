@@ -2006,12 +2006,8 @@ function renderHeatmap() {
   sd.setDate(sd.getDate() - (sdDow === 0 ? 6 : sdDow - 1));
 
   let html = '';
-  // 星期头
-  const dayLabels = ['一','二','三','四','五','六','日'];
-  html += '<div class="calendar-day" style="background:transparent;font-size:0.5rem;color:var(--text-light);aspect-ratio:1;"></div>';
-  dayLabels.forEach(l => html += `<div class="calendar-day" style="background:transparent;font-size:0.5rem;color:var(--text-light);aspect-ratio:1;">${l}</div>`);
 
-  // 按周排列
+  // 按周排列（去掉星期标签，直接铺格子）
   const totalDays = Math.ceil((endDate.getTime() - sd.getTime()) / 86400000) + 7;
   const weeks = Math.ceil(totalDays / 7);
   let dayCount = 0;
