@@ -38,26 +38,26 @@ body {
   position: relative;
 }
 
-/* 背景装饰 */
+/* 背景装饰 - 柔和几何光斑 */
 body::before {
   content: '';
   position: fixed;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
   background:
-    radial-gradient(circle at 20% 80%, rgba(99,102,241,0.06) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(244,114,182,0.06) 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, rgba(52,211,153,0.04) 0%, transparent 50%);
+    radial-gradient(ellipse 400px 300px at 15% 25%, rgba(99,102,241,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 300px 400px at 85% 60%, rgba(244,114,182,0.05) 0%, transparent 70%),
+    radial-gradient(ellipse 350px 250px at 50% 80%, rgba(52,211,153,0.04) 0%, transparent 70%),
+    radial-gradient(ellipse 250px 350px at 70% 10%, rgba(167,139,250,0.04) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
-  animation: bgShift 20s ease-in-out infinite;
+  animation: bgDrift 30s ease-in-out infinite;
 }
-@keyframes bgShift {
-  0%, 100% { transform: translate(0, 0); }
-  33% { transform: translate(1%, -1%); }
-  66% { transform: translate(-1%, 1%); }
+@keyframes bgDrift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(1.5%, -0.5%) scale(1.03); }
+  50% { transform: translate(-0.5%, 1%) scale(0.98); }
+  75% { transform: translate(-1%, -0.5%) scale(1.02); }
 }
 
 .container {
@@ -153,10 +153,25 @@ body::before {
   padding: 24px;
   box-shadow: var(--shadow);
   margin-bottom: 20px;
-  transition: var(--transition);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(255,255,255,0.5);
+  animation: cardIn 0.5s ease-out both;
 }
-.card:hover { box-shadow: var(--shadow-lg); }
+.card:nth-child(1) { animation-delay: 0s; }
+.card:nth-child(2) { animation-delay: 0.06s; }
+.card:nth-child(3) { animation-delay: 0.12s; }
+.card:nth-child(4) { animation-delay: 0.18s; }
+.card:nth-child(5) { animation-delay: 0.24s; }
+.card:nth-child(6) { animation-delay: 0.30s; }
+.card:nth-child(7) { animation-delay: 0.36s; }
+.card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .card-header {
   display: flex;
   align-items: center;
@@ -176,6 +191,20 @@ body::before {
   width: 220px;
   height: 220px;
   margin: 0 auto 20px;
+  border-radius: 50%;
+}
+.timer-circle::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: 0 0 30px rgba(99,102,241,0.15), 0 0 60px rgba(244,114,182,0.08);
+  animation: timerBreath 3s ease-in-out infinite;
+}
+@keyframes timerBreath {
+  0%, 100% { box-shadow: 0 0 20px rgba(99,102,241,0.1), 0 0 40px rgba(244,114,182,0.05); }
+  50% { box-shadow: 0 0 35px rgba(99,102,241,0.2), 0 0 70px rgba(244,114,182,0.12); }
 }
 .timer-circle svg {
   transform: rotate(-90deg);
@@ -451,49 +480,6 @@ body::before {
   100% { transform: scale(1); }
 }
 
-/* ========== 浮动侧边小组件 ========== */
-.floating-sidebar {
-  position: fixed;
-  top: 50%;
-  left: 16px;
-  transform: translateY(-50%);
-  z-index: 200;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.floating-widget {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 2px 12px rgba(99,102,241,0.08);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  text-decoration: none;
-  border: 1px solid rgba(255,255,255,0.6);
-}
-.floating-widget:hover {
-  transform: scale(1.12);
-  box-shadow: 0 4px 20px rgba(99,102,241,0.18);
-}
-.floating-widget .fw-icon { font-size: 1.2rem; line-height: 1; }
-.floating-widget .fw-val { font-size: 0.65rem; font-weight: 800; color: var(--text); }
-.floating-widget .fw-lbl { font-size: 0.5rem; color: var(--text-light); }
-.floating-widget.countdown-widget { background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(244,114,182,0.08)); }
-.floating-widget.countdown-widget .fw-val { font-size: 0.85rem; background: linear-gradient(135deg, #6366f1, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-
-/* 小屏幕隐藏浮动侧边栏 */
-@media (max-width: 960px) {
-  .floating-sidebar { display: none; }
-}
-
 /* ========== 个人名片 ========== */
 .profile-card {
   position: fixed;
@@ -618,6 +604,20 @@ body::before {
   border-radius: 10px;
   transition: width 0.6s ease;
   background: linear-gradient(90deg, var(--primary), var(--accent));
+  position: relative;
+  overflow: hidden;
+}
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: shimmer 2.5s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
 }
 .progress-fill.complete { background: linear-gradient(90deg, var(--success), #6ee7b7); }
 .progress-fill.overkill {
@@ -772,12 +772,15 @@ body::before {
 /* ========== 考研倒计时 ========== */
 .countdown-card {
   background: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(244,114,182,0.06));
-  border: 1.5px solid rgba(99,102,241,0.15);
-  animation: countdownPulse 3s ease-in-out infinite;
+  border: 1.5px solid rgba(99,102,241,0.12);
 }
-@keyframes countdownPulse {
-  0%, 100% { box-shadow: 0 4px 20px rgba(99,102,241,0.08); }
-  50% { box-shadow: 0 6px 30px rgba(244,114,182,0.12); }
+.countdown-card .countdown-number {
+  display: inline-block;
+  animation: countPulse 4s ease-in-out infinite;
+}
+@keyframes countPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
 }
 
 /* ========== 成就列表页 ========== */
@@ -954,26 +957,6 @@ body::before {
 </head>
 <body>
 
-<!-- 浮动侧边栏 -->
-<div class="floating-sidebar">
-  <div class="floating-widget countdown-widget" title="考研倒计时">
-    <span class="fw-val" id="floatCountdown">168</span>
-    <span class="fw-lbl">天</span>
-  </div>
-  <div class="floating-widget" title="连续打卡">
-    <span class="fw-icon">🔥</span>
-    <span class="fw-val" id="floatStreak">0</span>
-  </div>
-  <div class="floating-widget" title="今日学习">
-    <span class="fw-icon">⏱️</span>
-    <span class="fw-val" id="floatToday">0</span>
-  </div>
-  <div class="floating-widget" title="等级">
-    <span class="fw-icon" id="floatLevel">🥚</span>
-    <span class="fw-lbl" id="floatLevelName">萌新</span>
-  </div>
-</div>
-
 <div class="container">
   <!-- 头部 -->
   <header class="header">
@@ -1007,7 +990,7 @@ body::before {
     <div class="card countdown-card">
       <div style="text-align:center;">
         <div style="font-size:0.85rem;color:var(--text-light);margin-bottom:4px;">🎯 距离2026年12月19日考研</div>
-        <div style="font-size:3rem;font-weight:900;background:linear-gradient(135deg,#6366f1,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" id="countdownDays">168</div>
+        <div class="countdown-number" style="font-size:3rem;font-weight:900;background:linear-gradient(135deg,#6366f1,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;" id="countdownDays">168</div>
         <div style="font-size:1rem;color:var(--primary);font-weight:700;">天</div>
       </div>
     </div>
@@ -1643,9 +1626,6 @@ function refreshDashboard() {
 
   // 倒计时
   updateCountdown();
-
-  // 浮动侧边栏
-  updateFloatingSidebar(level);
 }
 
 function updateGreeting() {
@@ -1669,20 +1649,6 @@ function updateCountdown() {
   const diff = EXAM_DATE.getTime() - now.getTime();
   const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
   document.getElementById('countdownDays').textContent = daysLeft > 0 ? daysLeft : '🎉';
-  // 浮动侧边栏倒计时
-  const fc = document.getElementById('floatCountdown');
-  if (fc) fc.textContent = daysLeft > 0 ? daysLeft : '🎉';
-}
-
-function updateFloatingSidebar(level) {
-  const fs = document.getElementById('floatStreak');
-  const ft = document.getElementById('floatToday');
-  const fl = document.getElementById('floatLevel');
-  const fln = document.getElementById('floatLevelName');
-  if (fs) fs.textContent = data.streak || 0;
-  if (ft) ft.textContent = (data.todayMinutes || 0) + 'm';
-  if (fl) fl.textContent = level.icon;
-  if (fln) fln.textContent = level.title.replace(/^[^\s]+\s/, '').slice(0, 2);
 }
 
 // 获取某天的学习分钟数
