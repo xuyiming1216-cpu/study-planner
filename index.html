@@ -644,6 +644,7 @@ body::before {
 .badge-daily { background: #dbeafe; color: #2563eb; }
 .badge-weekly { background: #fce7f3; color: #db2777; }
 .badge-monthly { background: #d1fae5; color: #059669; }
+.badge-once { background: #fef3c7; color: #d97706; }
 
 .progress-bar {
   height: 10px;
@@ -1338,19 +1339,15 @@ function checkDateChange() {
     data.todayMinutes = 0;
     data.todayPomodoros = 0;
 
-    // 重置每日目标
+    // 重置每日目标（单次目标不重置）
     data.goals.forEach(g => {
       if (g.type === 'daily') g.current = 0;
     });
-
-    // 重置每周目标（周一重置）
     if (todayDate.getDay() === 1) {
       data.goals.forEach(g => {
         if (g.type === 'weekly') g.current = 0;
       });
     }
-
-    // 重置每月目标（1号重置）
     if (todayDate.getDate() === 1) {
       data.goals.forEach(g => {
         if (g.type === 'monthly') g.current = 0;
@@ -2477,6 +2474,7 @@ function showGoalModal(editId = null) {
           <option value="daily" ${existing && existing.type === 'daily' ? 'selected' : ''}>📅 每日目标</option>
           <option value="weekly" ${existing && existing.type === 'weekly' ? 'selected' : ''}>📆 每周目标</option>
           <option value="monthly" ${existing && existing.type === 'monthly' ? 'selected' : ''}>📊 每月目标</option>
+          <option value="once" ${existing && existing.type === 'once' ? 'selected' : ''}>🎯 单次目标</option>
         </select>
       </div>
       <div class="form-group">
@@ -2554,9 +2552,12 @@ function setGoalProgress(id, value) {
 
 function applyGoalProgress(goal, newValue) {
   const wasComplete = goal.current >= goal.target;
-  goal.current = Math.max(0, newValue); // 允许超过目标
+  goal.current = Math.max(0, newValue);
   const isComplete = goal.current >= goal.target;
   if (isComplete && !wasComplete) {
+    goal.completedAt = new Date().toISOString();
+    if (!goal.completedCount) goal.completedCount = 0;
+    goal.completedCount++;
     data.goalsCompleted = (data.goalsCompleted || 0) + 1;
     confetti();
     showToast(`🎉 目标达成：${goal.emoji} ${goal.name}！`);
@@ -2567,6 +2568,16 @@ function applyGoalProgress(goal, newValue) {
   saveData(data);
   checkAchievements();
   renderGoals();
+}
+
+function resetGoal(id) {
+  const goal = data.goals.find(g => g.id === id);
+  if (!goal) return;
+  goal.current = 0;
+  goal.completedAt = null;
+  saveData(data);
+  renderGoals();
+  showToast('🔄 目标已重置');
 }
 
 function deleteGoal(id) {
@@ -2589,10 +2600,41 @@ function renderGoals() {
   }
 
   let html = '';
-  const badgeClass = { daily: 'badge-daily', weekly: 'badge-weekly', monthly: 'badge-monthly' };
-  const badgeLabel = { daily: '每日', weekly: '每周', monthly: '每月' };
+  const badgeClass = { daily: 'badge-daily', weekly: 'badge-weekly', monthly: 'badge-monthly', once: 'badge-once' };
+  const badgeLabel = { daily: '每日', weekly: '每周', monthly: '每月', once: '单次' };
 
-  data.goals.forEach(goal => {
+  const activeGoals = data.goals.filter(g => g.current < g.target || g.type === 'daily' || g.type === 'weekly' || g.type === 'monthly');
+  const doneGoals = data.goals.filter(g => g.current >= g.target && g.type === 'once');
+
+  // 进行中
+  if (activeGoals.length > 0) {
+    html += '<div style="font-size:0.8rem;font-weight:700;color:var(--text-light);margin-bottom:8px;">📋 进行中</div>';
+    activeGoals.forEach(goal => renderGoalItem(goal));
+  }
+
+  // 已完成
+  if (doneGoals.length > 0) {
+    html += '<div style="font-size:0.8rem;font-weight:700;color:var(--success);margin:16px 0 8px;">✅ 已完成</div>';
+    doneGoals.forEach(g => {
+      const time = g.completedAt ? new Date(g.completedAt).toLocaleDateString('zh-CN') : '';
+      html += `
+        <div class="goal-item" style="opacity:0.75;">
+          <div class="goal-header">
+            <div class="goal-title">${g.emoji} ${g.name}</div>
+            <span class="goal-badge badge-once">单次</span>
+          </div>
+          <div class="goal-stats" style="font-size:0.75rem;">🎉 ${g.target} ${g.unit} 达成${time ? ' · ' + time : ''}</div>
+          <div style="display:flex;gap:4px;margin-top:6px;">
+            <button class="btn btn-sm" onclick="event.stopPropagation();resetGoal(${g.id})" style="padding:3px 8px;font-size:0.65rem;background:#f3f4f6;border:none;border-radius:6px;cursor:pointer;">🔄 重做</button>
+            <button class="btn btn-sm" onclick="event.stopPropagation();deleteGoal(${g.id})" style="padding:3px 8px;font-size:0.65rem;color:var(--danger);border:none;border-radius:6px;cursor:pointer;background:#f3f4f6;">🗑</button>
+          </div>
+        </div>`;
+    });
+  }
+
+  container.innerHTML = html || '<div class="card empty-state"><span class="empty-icon">🎯</span><p>还没有设定目标哦～</p></div>';
+
+  function renderGoalItem(goal) {
     const percent = Math.min(100, (goal.current / goal.target) * 100);
     const isComplete = goal.current >= goal.target;
     const isOver = goal.current > goal.target;
@@ -2600,7 +2642,7 @@ function renderGoals() {
       <div class="goal-item">
         <div class="goal-header">
           <div class="goal-title">${goal.emoji} ${goal.name}${isOver ? ' <span style="font-size:0.7rem;background:#fbbf24;color:#fff;padding:2px 6px;border-radius:50px;">🔥超额完成!</span>' : ''}</div>
-          <span class="goal-badge ${badgeClass[goal.type] || 'badge-daily'}">${badgeLabel[goal.type] || goal.type}</span>
+          <span class="goal-badge ${badgeClass[goal.type] || 'badge-daily'}">${badgeLabel[goal.type] || goal.type}${goal.completedCount>1?' ×'+goal.completedCount:''}</span>
         </div>
         <div class="progress-bar">
           <div class="progress-fill ${isComplete ? 'complete' : ''}${isOver ? ' overkill' : ''}" style="width:${percent}%"></div>
@@ -2622,8 +2664,6 @@ function renderGoals() {
           </div>
         </div>
       </div>`;
-  });
-  container.innerHTML = html;
 }
 
 // ==================== 学习记录 ====================
