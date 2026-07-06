@@ -1693,6 +1693,7 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
 // ==================== 仪表盘 ====================
 function refreshDashboard() {
   checkDateChange();
+  data.streak = recalcStreak(); // 每次刷新都重算
   const totalHours = data.totalMinutes / 60;
   const level = getLevel(totalHours);
   const nextLevel = getNextLevel(totalHours);
