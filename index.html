@@ -1210,6 +1210,7 @@ body::before {
         <button class="timer-preset" data-minutes="45" data-break="10">📚 45/10</button>
         <button class="timer-preset" data-minutes="50" data-break="10">🎯 50/10</button>
         <button class="timer-preset" data-minutes="15" data-break="3">⚡ 15/3</button>
+        <button class="timer-preset" data-minutes="0" data-break="5" data-countup="true">⏫ 正向</button>
       </div>
     </div>
 
@@ -2172,6 +2173,8 @@ let timerState = {
   workMinutes: 25,
   breakMinutes: 5,
   secondsLeft: 25 * 60,
+  elapsedSeconds: 0,
+  countUp: false,
   isRunning: false,
   isWork: true,
   sessionNumber: 1,
@@ -2184,24 +2187,54 @@ let calendarYear = new Date().getFullYear();
 let calMode = 'month'; // month | heat | chart：0=本周，负数=过去，正数=未来
 
 function updateTimerDisplay() {
+  if (timerState.countUp) {
+    // 正向计时：显示累计时间
+    const mins = Math.floor(timerState.elapsedSeconds / 60);
+    const secs = timerState.elapsedSeconds % 60;
+    const hrs = Math.floor(mins / 60);
+    const displayMins = mins % 60;
+    document.getElementById('timerDisplay').textContent = hrs > 0
+      ? `${hrs}:${String(displayMins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`
+      : `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+
+    // 圆形进度条：正向模式满圈呼吸
+    document.getElementById('timerProgress').style.strokeDashoffset = '0';
+    document.getElementById('timerLabel').textContent = '⏫ 正向计时';
+    document.getElementById('sessionCount').textContent = timerState.isRunning ? '计时中...' : '已停止';
+
+    const tomatoIcon = document.getElementById('tomatoIcon');
+    if (tomatoIcon) tomatoIcon.textContent = '⏫';
+
+    const btnStart = document.getElementById('btnStart');
+    if (timerState.isRunning) {
+      btnStart.innerHTML = '⏹️ 停止并记录';
+      btnStart.className = 'btn btn-accent';
+    } else {
+      btnStart.innerHTML = '▶️ 开始计时';
+      btnStart.className = 'btn btn-primary';
+    }
+
+    document.getElementById('btnSkip').style.display = 'none';
+    document.getElementById('btnReset').style.display = timerState.isRunning ? 'none' : '';
+    return;
+  }
+
+  // 倒计时模式
   const mins = Math.floor(timerState.secondsLeft / 60);
   const secs = timerState.secondsLeft % 60;
   document.getElementById('timerDisplay').textContent =
     String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
 
   const totalSeconds = timerState.isWork ? timerState.workMinutes * 60 : timerState.breakMinutes * 60;
-  const circumference = 2 * Math.PI * 95; // ~596.9
+  const circumference = 2 * Math.PI * 95;
   const offset = circumference - (timerState.secondsLeft / totalSeconds) * circumference;
   document.getElementById('timerProgress').style.strokeDashoffset = -offset;
 
   document.getElementById('timerLabel').textContent = timerState.isWork ? '🍅 专注时间' : '☕ 休息时间';
   document.getElementById('sessionCount').textContent = `第 ${timerState.sessionNumber} 个番茄`;
 
-  // 番茄图标：工作🍅 休息☕
   const tomatoIcon = document.getElementById('tomatoIcon');
-  if (tomatoIcon) {
-    tomatoIcon.textContent = timerState.isWork ? '🍅' : '☕';
-  }
+  if (tomatoIcon) tomatoIcon.textContent = timerState.isWork ? '🍅' : '☕';
 
   const btnStart = document.getElementById('btnStart');
   if (timerState.isRunning) {
@@ -2215,68 +2248,55 @@ function updateTimerDisplay() {
   }
 
   document.getElementById('btnSkip').style.display = timerState.isRunning ? 'inline-flex' : 'none';
+  document.getElementById('btnReset').style.display = '';
 }
 
 function toggleTimer() {
   if (timerState.isRunning) {
     clearInterval(timerState.intervalId);
     timerState.isRunning = false;
+    // 正向计时停止时记录
+    if (timerState.countUp && timerState.elapsedSeconds >= 60) {
+      const minutes = Math.floor(timerState.elapsedSeconds / 60);
+      timerState.workMinutes = minutes; // 用于这一次的记录
+      recordStudySession(minutes);
+      showToast(`⏫ 完成正向计时！学习 ${minutes} 分钟`);
+      refreshDashboard();
+    }
   } else {
     timerState.isRunning = true;
+    if (timerState.countUp) timerState.elapsedSeconds = 0;
     timerState.intervalId = setInterval(tickTimer, 1000);
   }
   updateTimerDisplay();
 }
 
 function tickTimer() {
+  if (timerState.countUp) {
+    // 正向计时：往上累加，永不到时
+    timerState.elapsedSeconds++;
+    updateTimerDisplay();
+    return;
+  }
+
   if (timerState.secondsLeft > 0) {
     timerState.secondsLeft--;
     updateTimerDisplay();
     return;
   }
 
-  // 时间到
+  // 时间到（仅倒计时）
   clearInterval(timerState.intervalId);
   timerState.isRunning = false;
 
   if (timerState.isWork) {
-    // 工作结束 -> 记录
     const minutes = timerState.workMinutes;
-    data.totalMinutes += minutes;
-    data.todayMinutes += minutes;
-    data.todayPomodoros++;
-    data.lastStudyDate = data.todayDate;
-    data.weeklyCheckins[data.todayDate] = true;
-
-    // 检查时间段成就
-    const hour = new Date().getHours();
-    if (hour < 6) data.earlyBird = true;
-    if (hour >= 23) data.nightOwl = true;
-    if (hour >= 0 && hour < 5) data.midnightOil = true;
-    if (hour < 8) trackMorningStreak();
-
-    // 隐藏成就追踪
-    trackPerfectPomodoros();        // 不中断完成番茄钟
-    trackMarathon(minutes);          // 单次长时间学习
-    trackEarlyLate(hour);           // 同一天早出晚归
-    trackDoubleDay();               // 双倍学习日
-    trackWeekendWarrior(minutes);   // 周末学习
-    trackLuckyNumber(minutes);      // 幸运数字
-
-    // 自动添加日志
-    addAutoLog(minutes);
-
-    saveData(data);
-    checkAchievements();
-    confetti();
+    recordStudySession(minutes);
     showToast(`🎉 太棒了！完成第 ${timerState.sessionNumber} 个番茄钟！(+${minutes}分钟)`);
-
-    // 切换到休息
     timerState.isWork = false;
     timerState.secondsLeft = timerState.breakMinutes * 60;
     document.getElementById('quickLogCard').style.display = 'none';
   } else {
-    // 休息结束
     timerState.isWork = true;
     timerState.sessionNumber++;
     timerState.secondsLeft = timerState.workMinutes * 60;
@@ -2287,10 +2307,38 @@ function tickTimer() {
   refreshDashboard();
 }
 
+// 记录一次学习（倒计时结束 或 正向计时手动停止时调用）
+function recordStudySession(minutes) {
+  data.totalMinutes += minutes;
+  data.todayMinutes += minutes;
+  data.todayPomodoros++;
+  data.lastStudyDate = data.todayDate;
+  data.weeklyCheckins[data.todayDate] = true;
+
+  const hour = new Date().getHours();
+  if (hour < 6) data.earlyBird = true;
+  if (hour >= 23) data.nightOwl = true;
+  if (hour >= 0 && hour < 5) data.midnightOil = true;
+  if (hour < 8) trackMorningStreak();
+
+  trackPerfectPomodoros();
+  trackMarathon(minutes);
+  trackEarlyLate(hour);
+  trackDoubleDay();
+  trackWeekendWarrior(minutes);
+  trackLuckyNumber(minutes);
+
+  addAutoLog(minutes);
+  saveData(data);
+  checkAchievements();
+  confetti();
+}
+
 function resetTimer() {
   clearInterval(timerState.intervalId);
   timerState.isRunning = false;
   timerState.secondsLeft = timerState.workMinutes * 60;
+  timerState.elapsedSeconds = 0;
   timerState.isWork = true;
   document.getElementById('quickLogCard').style.display = 'none';
   updateTimerDisplay();
@@ -2387,9 +2435,10 @@ document.querySelectorAll('.timer-preset').forEach(btn => {
     btn.classList.add('active');
     timerState.workMinutes = parseInt(btn.dataset.minutes);
     timerState.breakMinutes = parseInt(btn.dataset.break);
+    timerState.countUp = btn.dataset.countup === 'true';
     // 追踪使用的模式
     if (!data.timerModesUsed) data.timerModesUsed = [];
-    const mode = `${timerState.workMinutes}/${timerState.breakMinutes}`;
+    const mode = timerState.countUp ? 'countup' : `${timerState.workMinutes}/${timerState.breakMinutes}`;
     if (!data.timerModesUsed.includes(mode)) {
       data.timerModesUsed.push(mode);
       saveData(data);
