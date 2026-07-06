@@ -2314,6 +2314,8 @@ function recordStudySession(minutes) {
   data.todayPomodoros++;
   data.lastStudyDate = data.todayDate;
   data.weeklyCheckins[data.todayDate] = true;
+  // 第一天学习时初始化streak
+  if (!data.streak || data.streak === 0) data.streak = 1;
 
   const hour = new Date().getHours();
   if (hour < 6) data.earlyBird = true;
@@ -2693,6 +2695,7 @@ function showLogModal(editId = null) {
         data.todayMinutes += minutes;
         data.weeklyCheckins[date] = true;
         data.lastStudyDate = date;
+        if (!data.streak || data.streak === 0) data.streak = 1;
         const hour = new Date().getHours();
         if (hour < 6) data.earlyBird = true;
         if (hour >= 23) data.nightOwl = true;
