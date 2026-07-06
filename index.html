@@ -1254,7 +1254,7 @@ body::before {
         <button class="timer-preset active" data-minutes="25" data-break="5">🍅 25/5</button>
         <button class="timer-preset" data-minutes="45" data-break="10">📚 45/10</button>
         <button class="timer-preset" data-minutes="50" data-break="10">🎯 50/10</button>
-        <button class="timer-preset" data-minutes="15" data-break="3">⚡ 15/3</button>
+        <button class="timer-preset" id="btnCustomTimer" data-minutes="30" data-break="5" data-custom="true">⚙️ 自定义</button>
         <button class="timer-preset" data-minutes="0" data-break="5" data-countup="true">⏫ 正向</button>
       </div>
     </div>
@@ -2484,6 +2484,17 @@ function trackMorningStreak() {
 // 预设切换
 document.querySelectorAll('.timer-preset').forEach(btn => {
   btn.addEventListener('click', () => {
+    // 自定义时长：弹出输入框
+    if (btn.dataset.custom === 'true') {
+      const workMin = parseInt(prompt('请设置学习时长（分钟）：', btn.dataset.minutes || '30'));
+      if (isNaN(workMin) || workMin <= 0) return;
+      const breakMin = parseInt(prompt('请设置休息时长（分钟）：', btn.dataset.break || '5'));
+      if (isNaN(breakMin) || breakMin <= 0) return;
+      btn.dataset.minutes = workMin;
+      btn.dataset.break = breakMin;
+      btn.textContent = `⚙️ ${workMin}/${breakMin}`;
+    }
+
     document.querySelectorAll('.timer-preset').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     timerState.workMinutes = parseInt(btn.dataset.minutes);
@@ -2491,7 +2502,7 @@ document.querySelectorAll('.timer-preset').forEach(btn => {
     timerState.countUp = btn.dataset.countup === 'true';
     // 追踪使用的模式
     if (!data.timerModesUsed) data.timerModesUsed = [];
-    const mode = timerState.countUp ? 'countup' : `${timerState.workMinutes}/${timerState.breakMinutes}`;
+    const mode = timerState.countUp ? 'countup' : 'custom';
     if (!data.timerModesUsed.includes(mode)) {
       data.timerModesUsed.push(mode);
       saveData(data);
