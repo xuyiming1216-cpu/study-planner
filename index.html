@@ -1313,18 +1313,27 @@ function saveData(data) {
 let data = loadData();
 
 // 检查日期变更
+// 根据实际学习记录重新计算连续打卡天数
+function recalcStreak() {
+  let count = 0;
+  const today = new Date();
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    const minutes = data.logs.filter(l => l.date === dateStr).reduce((s, l) => s + l.minutes, 0);
+    if (minutes > 0) count++;
+    else break;
+  }
+  return count;
+}
+
 function checkDateChange() {
   const today = new Date().toISOString().split('T')[0];
   const todayDate = new Date();
   if (data.todayDate !== today) {
-    // 检查昨天是否学习了
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-    const prevStreak = data.streak || 0;
-    if (data.lastStudyDate === yesterday) {
-      data.streak = prevStreak + 1;
-    } else if (data.lastStudyDate !== today) {
-      data.streak = data.todayMinutes > 0 ? 1 : 0;
-    }
+    // streak 直接按学习记录重新计算
+    data.streak = recalcStreak();
     data.todayDate = today;
     data.todayMinutes = 0;
     data.todayPomodoros = 0;
@@ -2314,8 +2323,7 @@ function recordStudySession(minutes) {
   data.todayPomodoros++;
   data.lastStudyDate = data.todayDate;
   data.weeklyCheckins[data.todayDate] = true;
-  // 第一天学习时初始化streak
-  if (!data.streak || data.streak === 0) data.streak = 1;
+  data.streak = recalcStreak();
 
   const hour = new Date().getHours();
   if (hour < 6) data.earlyBird = true;
@@ -2695,7 +2703,7 @@ function showLogModal(editId = null) {
         data.todayMinutes += minutes;
         data.weeklyCheckins[date] = true;
         data.lastStudyDate = date;
-        if (!data.streak || data.streak === 0) data.streak = 1;
+        data.streak = recalcStreak();
         const hour = new Date().getHours();
         if (hour < 6) data.earlyBird = true;
         if (hour >= 23) data.nightOwl = true;
@@ -2792,6 +2800,9 @@ function renderLogs() {
 // ==================== 初始化 ====================
 function init() {
   checkDateChange();
+  data.streak = recalcStreak(); // 一次性纠正历史数据
+  saveData(data);
+  checkAchievements();
   updateTimerDisplay();
   refreshDashboard();
   renderGoals();
