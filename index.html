@@ -730,6 +730,50 @@ body::before {
 .log-info .log-subject { font-weight: 700; font-size: 0.9rem; }
 .log-info .log-meta { font-size: 0.75rem; color: var(--text-light); }
 .log-duration { font-weight: 800; font-size: 1rem; color: var(--primary); }
+.log-date-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: var(--transition);
+  user-select: none;
+}
+.log-date-header:hover { background: rgba(99,102,241,0.06); }
+.log-date-header .log-date-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.log-date-arrow {
+  display: inline-block;
+  transition: transform 0.25s ease;
+  font-size: 0.7rem;
+  color: var(--text-light);
+}
+.log-date-arrow.collapsed { transform: rotate(-90deg); }
+.log-group-content {
+  overflow: hidden;
+  transition: max-height 0.35s ease, opacity 0.25s ease;
+}
+.log-group-content.collapsed {
+  max-height: 0 !important;
+  opacity: 0;
+}
+.log-collapse-all {
+  font-size: 0.75rem;
+  color: var(--primary);
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 8px;
+  border-radius: 8px;
+  transition: var(--transition);
+  border: 1px solid var(--primary-light);
+  background: transparent;
+}
+.log-collapse-all:hover { background: rgba(99,102,241,0.08); }
 
 .empty-state {
   text-align: center;
@@ -1239,7 +1283,8 @@ body::before {
   <section class="panel" id="panel-log">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
       <div style="font-weight:700;">📋 学习记录</div>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="log-collapse-all" id="btnCollapseAll" onclick="collapseAllDates()" style="display:none;">📂 收起全部</button>
         <button class="btn btn-secondary btn-sm" onclick="showLogModal()">➕ 添加记录</button>
         <button class="btn btn-secondary btn-sm" onclick="clearLogs()" style="color:var(--danger)">🗑 清空</button>
       </div>
@@ -2790,9 +2835,85 @@ function clearLogs() {
   showToast('🗑 所有记录已清空');
 }
 
+// 折叠状态管理（模块级变量，面板切换后保持）
+let collapsedDates = new Set();
+
+function toggleDateGroup(date) {
+  const content = document.getElementById('log-group-' + date);
+  const arrow = document.getElementById('log-arrow-' + date);
+  if (!content || !arrow) return;
+
+  if (collapsedDates.has(date)) {
+    collapsedDates.delete(date);
+    content.classList.remove('collapsed');
+    arrow.classList.remove('collapsed');
+    // 动态恢复高度
+    content.style.maxHeight = content.scrollHeight + 'px';
+    setTimeout(() => { content.style.maxHeight = 'none'; }, 350);
+  } else {
+    collapsedDates.add(date);
+    content.style.maxHeight = content.scrollHeight + 'px';
+    // 强制回流后设置0
+    requestAnimationFrame(() => {
+      content.classList.add('collapsed');
+      arrow.classList.add('collapsed');
+    });
+  }
+  updateCollapseAllButton();
+}
+
+function collapseAllDates() {
+  const allExpanded = collapsedDates.size === 0;
+  const dateGroups = document.querySelectorAll('.log-group-content');
+  const arrows = document.querySelectorAll('.log-date-arrow');
+
+  if (allExpanded) {
+    // 全部收起
+    dateGroups.forEach(el => {
+      const date = el.dataset.date;
+      collapsedDates.add(date);
+      el.style.maxHeight = el.scrollHeight + 'px';
+      requestAnimationFrame(() => {
+        el.classList.add('collapsed');
+      });
+    });
+    arrows.forEach(a => a.classList.add('collapsed'));
+  } else {
+    // 全部展开
+    collapsedDates.clear();
+    dateGroups.forEach(el => {
+      el.classList.remove('collapsed');
+      el.style.maxHeight = 'none';
+    });
+    arrows.forEach(a => a.classList.remove('collapsed'));
+  }
+  updateCollapseAllButton();
+}
+
+function updateCollapseAllButton() {
+  const btn = document.getElementById('btnCollapseAll');
+  if (!btn) return;
+  const dateGroups = document.querySelectorAll('.log-group-content');
+  if (dateGroups.length === 0) {
+    btn.style.display = 'none';
+    return;
+  }
+  btn.style.display = 'inline-block';
+  if (collapsedDates.size === 0) {
+    btn.textContent = '📂 收起全部';
+  } else if (collapsedDates.size === dateGroups.length) {
+    btn.textContent = '📂 展开全部';
+  } else {
+    btn.textContent = '📂 展开全部';
+  }
+}
+
 function renderLogs() {
   const container = document.getElementById('logsList');
   if (data.logs.length === 0) {
+    collapsedDates.clear();
+    const btn = document.getElementById('btnCollapseAll');
+    if (btn) btn.style.display = 'none';
     container.innerHTML = `
       <div class="card empty-state">
         <span class="empty-icon">📝</span>
@@ -2808,35 +2929,56 @@ function renderLogs() {
     grouped[log.date].push(log);
   });
 
+  const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
   let html = '';
-  for (const [date, logs] of Object.entries(grouped).sort((a, b) => b[0].localeCompare(a[0]))) {
+  for (const date of sortedDates) {
+    const logs = grouped[date];
     const totalMin = logs.reduce((sum, l) => sum + l.minutes, 0);
     const dateDisplay = date === data.todayDate ? '今天' : date;
+    const isCollapsed = collapsedDates.has(date);
+
     html += `
       <div style="margin-bottom:16px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:0 4px;">
-          <span style="font-weight:700;font-size:0.85rem;">📅 ${dateDisplay}</span>
-          <span style="font-size:0.8rem;color:var(--primary);font-weight:600;">共 ${totalMin} 分钟</span>
-        </div>`;
+        <div class="log-date-header" onclick="toggleDateGroup('${date}')">
+          <div class="log-date-left">
+            <span class="log-date-arrow${isCollapsed ? ' collapsed' : ''}" id="log-arrow-${date}">▼</span>
+            <span style="font-weight:700;font-size:0.85rem;">📅 ${dateDisplay}</span>
+          </div>
+          <span style="font-size:0.8rem;color:var(--primary);font-weight:600;">${logs.length} 条 · 共 ${totalMin} 分钟</span>
+        </div>
+        <div class="log-group-content${isCollapsed ? ' collapsed' : ''}" id="log-group-${date}" data-date="${date}">`;
 
     logs.forEach(log => {
       html += `
-        <div class="log-entry">
-          <div class="log-subject-emoji">${log.subjectEmoji || '📚'}</div>
-          <div class="log-info">
-            <div class="log-subject">${log.subject}</div>
-            <div class="log-meta">${log.time || ''}${log.note ? ' · ' + log.note : ''}${log.auto ? ' · 🤖 自动' : ''}</div>
-          </div>
-          <div class="log-duration">${log.minutes}分钟</div>
-          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();showLogModal(${log.id})" style="padding:4px 8px;font-size:0.7rem;">✏️</button>
-          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();deleteLog(${log.id})" style="padding:4px 8px;font-size:0.7rem;color:var(--danger)">✕</button>
-        </div>`;
+          <div class="log-entry">
+            <div class="log-subject-emoji">${log.subjectEmoji || '📚'}</div>
+            <div class="log-info">
+              <div class="log-subject">${log.subject}</div>
+              <div class="log-meta">${log.time || ''}${log.note ? ' · ' + log.note : ''}${log.auto ? ' · 🤖 自动' : ''}</div>
+            </div>
+            <div class="log-duration">${log.minutes}分钟</div>
+            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();showLogModal(${log.id})" style="padding:4px 8px;font-size:0.7rem;">✏️</button>
+            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();deleteLog(${log.id})" style="padding:4px 8px;font-size:0.7rem;color:var(--danger)">✕</button>
+          </div>`;
     });
 
-    html += '</div>';
+    html += `
+        </div>
+      </div>`;
   }
 
   container.innerHTML = html;
+
+  // 恢复折叠状态的高度
+  for (const date of sortedDates) {
+    const content = document.getElementById('log-group-' + date);
+    if (content && collapsedDates.has(date)) {
+      content.style.maxHeight = '0';
+    }
+  }
+
+  updateCollapseAllButton();
 }
 
 // ==================== 初始化 ====================
